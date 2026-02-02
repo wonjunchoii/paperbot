@@ -38,13 +38,13 @@ ZOTERO_COLLECTION_KEY=optional_collection_key
 
 3. `feeds.yaml` 편집하여 수집할 저널 RSS 추가
 
-프로젝트 루트의 `feeds.yaml`에 피드 목록을 YAML 형식으로 적습니다.
+프로젝트 루트의 `feeds.yaml`에 피드 목록을 YAML 형식으로 적는다.
 
 | 필드 | 필수 | 설명 |
 |------|------|------|
-| `name` | 예 | 피드 이름. 목록/로그에 표시되며, Crossref 검색 시 저널 힌트로도 쓰입니다. |
-| `url` | 예 | RSS/Atom 피드 URL. 저널 사이트에서 "RSS", "Latest articles" 링크 주소를 복사하면 됩니다. |
-| `issn` | 아니오 | 저널 ISSN (예: `2057-3960`). RSS에 DOI가 없을 때 Crossref에서 DOI를 찾을 때 이 저널만 검색해 정확도를 높입니다. |
+| `name` | 예 | 피드 이름. 목록/로그에 표시되며, Crossref 검색 시 저널 힌트로도 쓰임 |
+| `url` | 예 | RSS/Atom 피드 URL. 저널 사이트에서 "RSS", "Latest articles" 링크 주소를 복사하면 됨 |
+| `issn` | 아니오 | 저널 ISSN (예: `2057-3960`). RSS에 DOI가 없을 때 Crossref에서 DOI를 찾을 때 이 저널만 검색해 정확도를 높임 |
 
 예시:
 
@@ -59,9 +59,9 @@ feeds:
     issn: "0927-0256"
 ```
 
-저널마다 RSS URL 형식이 다르므로, 각 저널 홈페이지에서 공식 RSS 링크를 확인한 뒤 그 주소를 `url`에 넣으면 됩니다.
+저널마다 RSS URL 형식이 다르므로, 각 저널 홈페이지에서 공식 RSS 링크를 확인한 뒤 그 주소를 `url`에 넣으면 됨.
 
-처음 실행 시 `paperbot fetch`를 하면 프로젝트 폴더에 `papers.db`가 생성됩니다. 이 파일은 로컬 수집 결과이므로 Git에는 올리지 않습니다.
+처음 실행 시 `paperbot fetch`를 하면 프로젝트 폴더에 `papers.db`가 생성된다.
 
 ## 사용법
 
@@ -130,3 +130,4 @@ uv run paperbot push-zotero
 - Zotero Test
 - `pick` Test
 - UI 제작
+- list 조건 넣기 / n days 마다 받아오기
