@@ -26,3 +26,19 @@ feeds:
   - name: "Advanced Functional Materials - Latest Articles"
     url: "https://onlinelibrary.wiley.com/feed/1616301x/most-recent"
     issn: "1616-301X"
+
+  - name: "APL Machine Learning - Latest Articles"
+    url: "https://rss.scitation.org/aml"
+    issn: "2691-1280"
+
+  - name: "Modelling and Simulation in Materials Science and Engineering - Latest Articles"
+    url: "https://iopscience.iop.org/journal/0965-0393/feeds/rss"
+    issn: "0965-0393"
+
+  - name: "Digital Discovery - Latest Articles"
+    url: "https://feeds.rsc.org/rss/dd"
+    issn: "2635-098X"
+
+  - name: "Journal of Chemical Theory and Computation - Latest Articles"
+    url: "https://pubs.acs.org/action/showFeed?type=etoc&feed=rss&jc=jctcce"
+    issn: "1549-9618"
