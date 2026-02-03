@@ -63,6 +63,29 @@ feeds:
 
 ## 사용법
 
+### GUI (웹 대시보드)
+
+인자 없이 실행하면 Streamlit 기반 웹 GUI가 열린다.
+
+```bash
+uv run paperbot
+```
+
+브라우저에서 **PaperBot Dashboard**가 뜨며, CLI와 동일한 워크플로우를 화면에서 처리할 수 있다.
+
+| 구성 | 설명 |
+|------|------|
+| **사이드바** | 상태별 논문 개수(new / picked / read / archived), "Reset All Views" 버튼 |
+| **Fetch New Papers** | RSS 피드에서 새 논문 수집·보강 후 DB에 저장 (CLI `fetch`와 동일) |
+| **Export Picked** | 선택된 논문을 Markdown으로 내보내기 (CLI `export`와 동일) |
+| **New 탭** | 새 논문 목록 테이블. Pick 체크 후 "Apply Selection"으로 선택 반영 |
+| **Picked 탭** | export 대상으로 선택된 논문 목록. 각 항목에서 "Unpick"으로 선택 해제 |
+| **Archive 탭** | DB에 저장된 전체 논문 목록(상태·ID·제목·저널·발행일·DOI) |
+
+GUI에서도 `feeds.yaml`, `papers.db`, `exports/` 경로는 CLI와 동일하게 사용된다.
+
+### CLI (터미널)
+
 ```bash
 # RSS 피드에서 논문 수집
 uv run paperbot fetch
@@ -149,14 +172,51 @@ uv run paperbot export
 ## 워크플로우
 
 1. `fetch` → 피드에서 논문 수집
-2. `list` → 새 논문 확인
-3. `pick` → 관심 논문 선택
-4. `export` → Markdown 파일로 내보내기
+2. `list` → 새 논문 확인 (GUI: New 탭)
+3. `pick` → 관심 논문 선택 (GUI: New 탭에서 체크 후 Apply Selection)
+4. `export` → Markdown 파일로 내보내기 (GUI: Export Picked 버튼)
+
+위 단계는 **GUI**(`uv run paperbot`) 또는 **CLI** 명령어로 진행할 수 있다.
 
 # TODO
-- UI 제작
-- list 조건 넣기 / n days 마다 받아오기
-- title 조건부 파싱
+<details>
+
+## UI / Table Display
+- [ ] Table을 화면 너비에 맞게 표시 (`use_container_width=True`)
+- [ ] `title` column은 줄바꿈(wrap) 허용하여 긴 텍스트도 전부 읽을 수 있도록 설정
+
+## Reset All Views
+- [ ] **Reset All Views 버튼 역할 정의**
+  - 모든 필터 초기화 (tag, keyword, journal, date range 등)
+  - 전체 데이터 다시 표시
+
+## Tabs
+- [ ] **Archive Tab**
+  - `archived` tag만 필터링한 결과 표시
+  - `created_at` column 포함
+
+- [ ] **All Tab**
+  - DB 전체 논문 데이터 표시
+  - checkbox로 tag 필터링 가능
+  - 각 row에서 `pick` 가능하도록 설정
+
+## Filters (모든 Table 탭 공통)
+- [ ] `title` keyword 필터 기능 추가  
+  - 사용자가 직접 입력 가능 (text input 또는 multiselect)
+- [ ] DB에 존재하는 journal 리스트 자동 추출
+  - selectbox로 journal 필터 가능
+
+## Date Range Filters
+- [ ] Published date 기준 필터
+  - start date 선택
+  - end date 선택
+  - 해당 기간에 published 된 논문만 표시
+
+- [ ] Created date 기준 필터
+  - start date 선택
+  - end date 선택
+  - 해당 기간에 created 된 논문만 표시
+</details>
 
 # 기여
 오류 발견이나 기능 제안이 있으면 이메일로 알려주시거나 [Pull Request](https://github.com/wonjuncio/paperbot/pulls)를 보내주세요.
