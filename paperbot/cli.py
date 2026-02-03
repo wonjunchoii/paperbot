@@ -1,6 +1,7 @@
 """Command-line interface handlers."""
 
 import argparse
+import os
 from typing import Optional
 
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -27,7 +28,15 @@ class PaperBotCLI:
         self.repo = PaperRepository(self.settings.db_path)
 
     def cmd_fetch(self, workers: int = 8) -> None:
-        """Fetch papers from all configured feeds (Crossref calls run in parallel)."""
+        """Fetch papers from all configured feeds (Crossref calls run in parallel).
+        
+        Archives existing 'new' papers to 'archived' before fetching.
+        """
+        # Archive old 'new' papers first
+        archived_count = self.repo.archive_old_new()
+        if archived_count > 0:
+            self.ui.info(f"Archived {archived_count} old 'new' papers")
+
         crossref = CrossrefService(self.settings.contact_email)
         feed_service = FeedService(
             feeds_path=self.settings.feeds_path,
@@ -69,7 +78,7 @@ class PaperBotCLI:
         """List papers by status.
 
         Args:
-            status: Filter by status ('new', 'picked', 'pushed')
+            status: Filter by status ('new', 'archived', 'read', 'picked')
             limit: Maximum papers to display
             sort_by: Sort by 'id', 'date', or 'title' (default: id)
         """
@@ -77,19 +86,18 @@ class PaperBotCLI:
         self.ui.display_papers(papers, status)
 
     def cmd_pick(self, ids: list[int]) -> None:
-        """Mark papers as picked.
+        """Mark papers as picked (set is_picked=1).
 
         Args:
             ids: Paper IDs to mark as picked
         """
-        self.repo.update_status(ids, "picked")
+        self.repo.pick(ids)
         self.ui.picked(ids)
 
     def cmd_unpick(self, ids: list[int]) -> None:
-        """Unmark papers (set status back to new).
+        """Unmark papers (set is_picked=0).
 
-        Only papers that are currently 'picked' are changed. If none are picked,
-        shows a message instead of silently doing nothing.
+        Only papers that are currently picked are changed.
 
         Args:
             ids: Paper IDs to unmark
@@ -101,7 +109,10 @@ class PaperBotCLI:
             self.ui.no_papers_to_unpick(ids)
 
     def cmd_export(self) -> None:
-        """Export picked papers to markdown file."""
+        """Export picked papers to markdown file.
+        
+        Automatically unpicks papers after export (is_picked=0, status='read').
+        """
         papers = self.repo.find_picked()
         
         if not papers:
@@ -111,7 +122,7 @@ class PaperBotCLI:
         exporter = MarkdownExporter(self.settings.export_dir)
         filepath = exporter.export(papers)
         
-        # Mark papers as read
+        # Mark papers as read and unpick
         paper_ids = [p.id for p in papers if p.id is not None]
         self.repo.mark_exported(paper_ids)
         
@@ -145,7 +156,7 @@ def create_parser() -> argparse.ArgumentParser:
     list_parser.add_argument(
         "--status",
         default="new",
-        choices=["new", "picked", "read"],
+        choices=["new", "archived", "read", "picked"],
         help="Filter by status (default: new)",
     )
     list_parser.add_argument(
@@ -194,7 +205,7 @@ def main() -> None:
     cli = PaperBotCLI()
 
     if args.command == "fetch":
-        cli.cmd_fetch(workers=args.workers)
+        cli.cmd_fetch(workers=min(args.workers, os.cpu_count() - 1))
     elif args.command == "list":
         cli.cmd_list(args.status, args.limit, args.sort_by)
     elif args.command == "pick":

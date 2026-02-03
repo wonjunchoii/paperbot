@@ -48,12 +48,24 @@ class PaperRepository:
                     journal TEXT,
                     abstract TEXT,
                     status TEXT NOT NULL DEFAULT 'new',
+                    is_picked INTEGER NOT NULL DEFAULT 0,
                     zotero_key TEXT,
                     UNIQUE(doi),
                     UNIQUE(link)
                 );
             """)
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_status ON papers(status);")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_is_picked ON papers(is_picked);")
+            
+            # Migrate existing data if is_picked doesn't exist
+            cursor.execute("PRAGMA table_info(papers)")
+            columns = [row[1] for row in cursor.fetchall()]
+            if "is_picked" not in columns:
+                cursor.execute("ALTER TABLE papers ADD COLUMN is_picked INTEGER NOT NULL DEFAULT 0")
+                # Migrate: status='picked' → is_picked=1, status='new'
+                cursor.execute("UPDATE papers SET is_picked = 1, status = 'new' WHERE status = 'picked'")
+                conn.commit()
+            
             conn.commit()
 
     def upsert(self, paper: Paper) -> bool:
@@ -72,8 +84,8 @@ class PaperRepository:
             cursor.execute(
                 """
                 INSERT OR IGNORE INTO papers
-                (created_at, source, title, link, doi, published, authors, journal, abstract, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new')
+                (created_at, source, title, link, doi, published, authors, journal, abstract, status, is_picked)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', 0)
                 """,
                 (
                     now,
@@ -90,16 +102,30 @@ class PaperRepository:
             conn.commit()
             return cursor.rowcount > 0
 
+    def archive_old_new(self) -> int:
+        """Archive all papers with status='new' to 'archived'.
+        
+        Called at the start of fetch to move old 'new' papers out of view.
+        
+        Returns:
+            Number of papers archived
+        """
+        with self._connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("UPDATE papers SET status = 'archived' WHERE status = 'new'")
+            conn.commit()
+            return cursor.rowcount
+
     def find_by_status(
         self,
         status: str,
         limit: int = 50,
         sort_by: str = "id",
     ) -> list[Paper]:
-        """Find papers by status.
+        """Find papers by status (or pseudo-status 'picked' for is_picked=1).
 
         Args:
-            status: Paper status ('new', 'picked', 'pushed')
+            status: 'new', 'archived', 'read', or 'picked' (is_picked=1)
             limit: Maximum number of papers to return
             sort_by: Sort key - 'id', 'date', or 'title' (default: id)
 
@@ -107,24 +133,42 @@ class PaperRepository:
             List of Paper objects
         """
         order_clauses = {
-            "id": "id ASC",  # 1번이 맨 위
+            "id": "id ASC",
             "date": "COALESCE(published, created_at) DESC",
             "title": "title ASC",
         }
         order = order_clauses.get(sort_by, order_clauses["id"])
 
+        # Special case: status='picked' → is_picked=1
+        if status == "picked":
+            where_clause = "is_picked = 1"
+        else:
+            where_clause = "status = ?"
+
         with self._connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                f"""
-                SELECT id, source, title, link, doi, published, authors, journal, abstract, status, zotero_key
-                FROM papers
-                WHERE status = ?
-                ORDER BY {order}
-                LIMIT ?
-                """,
-                (status, limit),
-            )
+            if status == "picked":
+                cursor.execute(
+                    f"""
+                    SELECT id, source, title, link, doi, published, authors, journal, abstract, status, is_picked, zotero_key, created_at
+                    FROM papers
+                    WHERE {where_clause}
+                    ORDER BY {order}
+                    LIMIT ?
+                    """,
+                    (limit,),
+                )
+            else:
+                cursor.execute(
+                    f"""
+                    SELECT id, source, title, link, doi, published, authors, journal, abstract, status, is_picked, zotero_key, created_at
+                    FROM papers
+                    WHERE {where_clause}
+                    ORDER BY {order}
+                    LIMIT ?
+                    """,
+                    (status, limit),
+                )
             rows = cursor.fetchall()
 
         papers = []
@@ -147,7 +191,7 @@ class PaperRepository:
         return papers
 
     def find_picked(self, limit: int = 100) -> list[Paper]:
-        """Find picked papers for export.
+        """Find picked papers for export (is_picked=1).
 
         Args:
             limit: Maximum number of papers to return
@@ -159,9 +203,9 @@ class PaperRepository:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                SELECT id, source, title, link, doi, published, authors, journal, abstract, status, zotero_key
+                SELECT id, source, title, link, doi, published, authors, journal, abstract, status, is_picked, zotero_key, created_at
                 FROM papers
-                WHERE status = 'picked'
+                WHERE is_picked = 1
                 ORDER BY COALESCE(published, created_at) DESC
                 LIMIT ?
                 """,
@@ -188,15 +232,14 @@ class PaperRepository:
 
         return papers
 
-    def update_status(self, ids: list[int], status: str) -> int:
-        """Update status for multiple papers.
-
+    def pick(self, ids: list[int]) -> int:
+        """Set is_picked=1 for given IDs.
+        
         Args:
-            ids: List of paper IDs to update
-            status: New status value
-
+            ids: Paper IDs to pick
+            
         Returns:
-            Number of papers updated
+            Number of papers picked
         """
         if not ids:
             return 0
@@ -205,20 +248,20 @@ class PaperRepository:
         with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                f"UPDATE papers SET status = ? WHERE id IN ({placeholders})",
-                [status] + ids,
+                f"UPDATE papers SET is_picked = 1 WHERE id IN ({placeholders})",
+                ids,
             )
             conn.commit()
             return cursor.rowcount
 
     def unpick(self, ids: list[int]) -> list[int]:
-        """Set status to 'new' only for papers that are currently 'picked'.
+        """Set is_picked=0 only for papers that are currently picked.
 
         Args:
             ids: Paper IDs to unmark
 
         Returns:
-            List of IDs that were actually in picked status and were unpicked
+            List of IDs that were actually picked and were unpicked
         """
         if not ids:
             return []
@@ -227,7 +270,7 @@ class PaperRepository:
         with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                f"SELECT id FROM papers WHERE id IN ({placeholders}) AND status = 'picked'",
+                f"SELECT id FROM papers WHERE id IN ({placeholders}) AND is_picked = 1",
                 ids,
             )
             picked_ids = [row["id"] for row in cursor.fetchall()]
@@ -237,14 +280,14 @@ class PaperRepository:
 
             ph = ",".join(["?"] * len(picked_ids))
             cursor.execute(
-                f"UPDATE papers SET status = 'new' WHERE id IN ({ph})",
+                f"UPDATE papers SET is_picked = 0 WHERE id IN ({ph})",
                 picked_ids,
             )
             conn.commit()
             return picked_ids
 
     def mark_exported(self, paper_ids: list[int]) -> None:
-        """Mark papers as exported (status = 'read').
+        """Mark papers as exported (status='read', is_picked=0).
 
         Args:
             paper_ids: List of paper IDs to mark as read
@@ -256,7 +299,7 @@ class PaperRepository:
         with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                f"UPDATE papers SET status = 'read' WHERE id IN ({placeholders})",
+                f"UPDATE papers SET status = 'read', is_picked = 0 WHERE id IN ({placeholders})",
                 paper_ids,
             )
             conn.commit()

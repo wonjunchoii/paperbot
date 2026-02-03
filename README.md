@@ -153,32 +153,10 @@ uv run paperbot export
 3. `pick` → 관심 논문 선택
 4. `export` → Markdown 파일로 내보내기
 
-## 파일 구조
+# TODO
+- UI 제작
+- list 조건 넣기 / n days 마다 받아오기
+- title 조건부 파싱
 
-```
-paperbot/
-├── papers.db           # SQLite 데이터베이스 (자동 생성)
-├── exports/            # 내보낸 Markdown 파일 (자동 생성)
-│   ├── 2026-02-01.md
-│   ├── 2026-02-02.md
-│   └── 2026-02-03.md
-├── feeds.yaml          # RSS 피드 설정
-└── .env                # 환경변수 (선택사항)
-```
-
-## 파일 구조
-
-```
-paperbot/
-├── papers.db           # SQLite 데이터베이스 (자동 생성)
-├── exports/            # 내보낸 Markdown 파일 (자동 생성)
-│   ├── 2026-02-01.md
-│   ├── 2026-02-02.md
-│   └── 2026-02-03.md
-├── feeds.yaml          # RSS 피드 설정
-└── .env                # 환경변수 (선택사항)
-```
-
-## 기여
-
+# 기여
 오류 발견이나 기능 제안이 있으면 이메일로 알려주시거나 [Pull Request](https://github.com/wonjuncio/paperbot/pulls)를 보내주세요.

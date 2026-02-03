@@ -11,10 +11,6 @@ feeds:
     url: "https://iopscience.iop.org/journal/2632-2153/feeds/rss"
     issn: "2632-2153"
 
-  - name: "Physical Review B - Latest Articles"
-    url: "https://feeds.aps.org/rss/recent/prb.xml"
-    issn: "2469-9950"
-
   - name: "Computational Materials Science - Latest Articles"
     url: "https://rss.sciencedirect.com/publication/science/09270256"
     issn: "0927-0256"
