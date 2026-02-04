@@ -180,42 +180,11 @@ uv run paperbot export
 
 # TODO
 <details>
-
-## UI / Table Display
-- [ ] Table을 화면 너비에 맞게 표시 (`use_container_width=True`)
-- [ ] `title` column은 줄바꿈(wrap) 허용하여 긴 텍스트도 전부 읽을 수 있도록 설정
-
-## Reset All Views
-- [ ] **Reset All Views 버튼 역할 정의**
-  - 모든 필터 초기화 (tag, keyword, journal, date range 등)
-  - 전체 데이터 다시 표시
-
-## Tabs
-- [ ] **Archive Tab**
-  - `archived` tag만 필터링한 결과 표시
-  - `created_at` column 포함
-
-- [ ] **All Tab**
-  - DB 전체 논문 데이터 표시
-  - checkbox로 tag 필터링 가능
-  - 각 row에서 `pick` 가능하도록 설정
-
-## Filters (모든 Table 탭 공통)
-- [ ] `title` keyword 필터 기능 추가  
-  - 사용자가 직접 입력 가능 (text input 또는 multiselect)
-- [ ] DB에 존재하는 journal 리스트 자동 추출
-  - selectbox로 journal 필터 가능
-
-## Date Range Filters
-- [ ] Published date 기준 필터
-  - start date 선택
-  - end date 선택
-  - 해당 기간에 published 된 논문만 표시
-
-- [ ] Created date 기준 필터
-  - start date 선택
-  - end date 선택
-  - 해당 기간에 created 된 논문만 표시
+- start date, end date 선택하고 그 사이에 published 된 논문들 필터링
+- start date, end date 선택하고 그 사이에 created 된 논문들 필터링
+- tab 추가 (all 에서는 status tag 표시, tag 별로 필터링 가능하게 (multiselect로))
+- read tab추가, read tab 에는 created_at 으로 북마킹
+- keyword 필터링 (multiselect? config에 미리 세팅?)
 </details>
 
 # 기여
