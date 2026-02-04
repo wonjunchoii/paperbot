@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaperBot Dashboard</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        .tab-active { 
+            border-bottom: 2px solid #3b82f6; 
+            color: #3b82f6;
+            font-weight: 600;
+        }
+        .tab-inactive { 
+            border-bottom: 2px solid transparent; 
+            color: #64748b;
+        }
+        .tab-inactive:hover { 
+            color: #334155;
+            border-bottom-color: #e2e8f0;
+        }
+        
+        .paper-item:hover .paper-title {
+            color: #2563eb;
+        }
+        
+        .stat-card {
+            transition: all 0.2s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulse-dot {
+            animation: pulse-dot 1.5s ease-in-out infinite;
+        }
+        
+        .htmx-request .loading-indicator {
+            display: inline-block;
+        }
+        .loading-indicator {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 h-screen flex overflow-hidden" hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r flex flex-col shadow-sm">
+        <!-- Logo -->
+        <div class="h-16 border-b flex items-center px-5 gap-3">
+            <span class="text-2xl">📄</span>
+            <h1 class="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">PaperBot</h1>
+        </div>
+        
+        <!-- Stats -->
+        <div class="p-4" id="stats-container" hx-get="/stats" hx-trigger="load, statsUpdated from:body" hx-swap="innerHTML">
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">통계</div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="stat-card bg-blue-50 rounded-lg p-3 text-center">
+                    <div class="text-2xl font-bold text-blue-600">{{ stats.new }}</div>
+                    <div class="text-xs text-blue-500 font-medium">NEW</div>
+                </div>
+                <div class="stat-card bg-amber-50 rounded-lg p-3 text-center">
+                    <div class="text-2xl font-bold text-amber-600">{{ stats.picked }}</div>
+                    <div class="text-xs text-amber-500 font-medium">PICKED</div>
+                </div>
+                <div class="stat-card bg-slate-50 rounded-lg p-3 text-center">
+                    <div class="text-2xl font-bold text-slate-600">{{ stats.archived }}</div>
+                    <div class="text-xs text-slate-500 font-medium">ARCHIVED</div>
+                </div>
+                <div class="stat-card bg-green-50 rounded-lg p-3 text-center">
+                    <div class="text-2xl font-bold text-green-600">{{ stats.read }}</div>
+                    <div class="text-xs text-green-500 font-medium">READ</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="p-4 border-t">
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">작업</div>
+            
+            <!-- Fetch Button -->
+            <button id="fetch-btn"
+                    hx-post="/actions/fetch" 
+                    hx-target="#fetch-result" 
+                    hx-swap="innerHTML"
+                    class="w-full mb-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition flex items-center justify-center gap-2">
+                <svg class="w-4 h-4 loading-indicator animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Fetch New Papers</span>
+            </button>
+            <div id="fetch-result" class="mb-3"></div>
+            
+            <!-- Export Button -->
+            <button hx-post="/actions/export" 
+                    hx-target="#export-result" 
+                    hx-swap="innerHTML"
+                    class="w-full mb-2 px-4 py-2.5 bg-slate-800 text-white rounded-lg font-semibold hover:bg-slate-900 transition flex items-center justify-center gap-2">
+                <svg class="w-4 h-4 loading-indicator animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Export Picked</span>
+            </button>
+            <div id="export-result"></div>
+        </div>
+        
+        <!-- Journal Filter -->
+        <div class="p-4 border-t">
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">저널 필터</div>
+            <select id="journal-filter" 
+                    class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    onchange="filterByJournal(this.value)">
+                <option value="">전체 저널</option>
+                {% for journal in journals %}
+                <option value="{{ journal }}">{{ journal }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <!-- Spacer -->
+        <div class="flex-1"></div>
+        
+        <!-- Footer -->
+        <div class="p-4 border-t text-xs text-slate-400 text-center">
+            PaperBot v1.0
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- Header with Tabs and Search -->
+        <header class="bg-white border-b px-6 shadow-sm">
+            <div class="flex items-center justify-between h-16">
+                <!-- Tabs -->
+                <nav class="flex gap-1">
+                    <button id="tab-new" onclick="switchTab('new')" 
+                            class="px-4 py-4 text-sm font-medium tab-active transition-all">
+                        New
+                        <span class="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-600 rounded text-xs">{{ stats.new }}</span>
+                    </button>
+                    <button id="tab-picked" onclick="switchTab('picked')" 
+                            class="px-4 py-4 text-sm font-medium tab-inactive transition-all">
+                        Picked
+                        <span class="ml-1 px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded text-xs">{{ stats.picked }}</span>
+                    </button>
+                    <button id="tab-archive" onclick="switchTab('archive')" 
+                            class="px-4 py-4 text-sm font-medium tab-inactive transition-all">
+                        Archive
+                    </button>
+                </nav>
+                
+                <!-- Search -->
+                <div class="flex-1 max-w-md ml-8">
+                    <div class="relative">
+                        <input type="search" id="search-input" 
+                               placeholder="제목, 저널, 저자 검색..." 
+                               class="w-full bg-slate-100 border-none rounded-full pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                               oninput="debouncedSearch()">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Paper List -->
+            <div class="w-2/5 border-r bg-white flex flex-col">
+                <div class="p-3 border-b bg-slate-50 flex justify-between items-center text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <span id="list-title">New Papers</span>
+                    <span class="text-slate-400">날짜순</span>
+                </div>
+                <div id="paper-list" class="flex-1 overflow-y-auto custom-scroll"
+                     hx-get="/papers/new" hx-trigger="load" hx-swap="innerHTML">
+                    <div class="p-8 text-center text-slate-400">
+                        <div class="loading-indicator">
+                            <svg class="w-8 h-8 mx-auto animate-spin text-blue-500" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paper Detail -->
+            <article id="detail-view" class="w-3/5 overflow-y-auto bg-white custom-scroll">
+                <div class="h-full flex flex-col items-center justify-center text-slate-400 p-12 text-center">
+                    <svg class="w-16 h-16 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <p class="text-lg font-medium mb-1">논문 상세 보기</p>
+                    <p class="text-sm">왼쪽 목록에서 논문을 선택하면<br>메타데이터와 초록을 확인할 수 있습니다.</p>
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <script>
+        let currentTab = 'new';
+        let searchTimeout = null;
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab styles
+            ['new', 'picked', 'archive'].forEach(t => {
+                const btn = document.getElementById('tab-' + t);
+                if (t === tab) {
+                    btn.classList.remove('tab-inactive');
+                    btn.classList.add('tab-active');
+                } else {
+                    btn.classList.remove('tab-active');
+                    btn.classList.add('tab-inactive');
+                }
+            });
+            
+            // Update list title
+            const titles = { new: 'New Papers', picked: 'Picked Papers', archive: 'All Papers' };
+            document.getElementById('list-title').textContent = titles[tab];
+            
+            // Fetch papers
+            loadPapers();
+        }
+        
+        function loadPapers() {
+            const query = document.getElementById('search-input').value;
+            const journal = document.getElementById('journal-filter').value;
+            const params = new URLSearchParams();
+            if (query) params.set('q', query);
+            if (journal) params.set('journal', journal);
+            
+            const url = '/papers/' + currentTab + (params.toString() ? '?' + params.toString() : '');
+            htmx.ajax('GET', url, '#paper-list');
+        }
+        
+        function debouncedSearch() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(loadPapers, 300);
+        }
+        
+        function filterByJournal(journal) {
+            loadPapers();
+        }
+        
+        // Listen for fetch completion to refresh list and stats
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            if (evt.detail.pathInfo.requestPath === '/actions/fetch') {
+                // Poll for fetch status if still running
+                const checkStatus = () => {
+                    htmx.ajax('GET', '/actions/fetch-status', '#fetch-result').then(() => {
+                        const resultEl = document.getElementById('fetch-result');
+                        if (resultEl && resultEl.querySelector('.pulse-dot')) {
+                            setTimeout(checkStatus, 1000);
+                        } else {
+                            // Fetch complete, refresh list and stats
+                            loadPapers();
+                            htmx.trigger(document.body, 'statsUpdated');
+                        }
+                    });
+                };
+                setTimeout(checkStatus, 500);
+            }
+            
+            if (evt.detail.pathInfo.requestPath === '/actions/export') {
+                // Refresh after export
+                loadPapers();
+                htmx.trigger(document.body, 'statsUpdated');
+            }
+            
+            if (evt.detail.pathInfo.requestPath.startsWith('/actions/pick/')) {
+                // Refresh stats after pick/unpick
+                htmx.trigger(document.body, 'statsUpdated');
+            }
+        });
+    </script>
+</body>
+</html>

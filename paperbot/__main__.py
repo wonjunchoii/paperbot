@@ -8,6 +8,8 @@ Usage:
 import atexit
 import sys
 import uvicorn
+import threading
+import webbrowser
 
 
 def _reset_picked_on_exit() -> None:
@@ -21,12 +23,25 @@ def _reset_picked_on_exit() -> None:
     except Exception:
         pass  # avoid breaking process exit
 
+def _open_app_window(url: str) -> None:
+    """Open the app window."""
+    webbrowser.open(url)
 
 def run() -> None:
     """Entry point: no args → GUI (via streamlit run), else → CLI."""
+    host, port = "127.0.0.1", 8000
+    url = f"http://{host}:{port}"
+        
     atexit.register(_reset_picked_on_exit)
+    threading.Timer(0.8, lambda: _open_app_window(url)).start()
     if len(sys.argv) == 1:
-        uvicorn.run("paperbot.gui.app:app", host="127.0.0.1", port=8000, reload=True)
+        uvicorn.run(
+            "paperbot.gui.app:app",
+            host=host,
+            port=port,
+            reload=False,
+            access_log=False
+        )
     else:
         from paperbot.cli import run_cli
         run_cli()
