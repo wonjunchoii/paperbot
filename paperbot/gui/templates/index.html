@@ -684,12 +684,7 @@
             const path = evt.detail.pathInfo.requestPath || '';
             const pickMatch = path.match(/^\/actions\/pick\/(\d+)$/);
             if (pickMatch) {
-                const paperId = pickMatch[1];
                 loadPapers();
-                const detailContent = document.querySelector('#detail-view [data-paper-id]');
-                if (detailContent && detailContent.getAttribute('data-paper-id') === paperId) {
-                    htmx.ajax('GET', '/papers/' + paperId, '#detail-view');
-                }
             }
         });
         
