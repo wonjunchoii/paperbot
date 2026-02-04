@@ -190,6 +190,7 @@ class PaperRepository:
                 id=row["id"],
                 status=row["status"],
                 is_picked=row["is_picked"],
+                created_at=row["created_at"],
             )
             papers.append(paper)
 
@@ -232,6 +233,7 @@ class PaperRepository:
                 id=row["id"],
                 status=row["status"],
                 is_picked=row["is_picked"],
+                created_at=row["created_at"],
             )
             papers.append(paper)
 
@@ -326,6 +328,7 @@ class PaperRepository:
                 id=row["id"],
                 status=row["status"],
                 is_picked=row["is_picked"],
+                created_at=row["created_at"],
             )
             papers.append(paper)
         return papers

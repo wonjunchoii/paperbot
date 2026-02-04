@@ -22,3 +22,4 @@ class Paper:
     id: Optional[int] = None
     status: Literal["new", "archived", "read"] = "new"
     is_picked: int = 0
+    created_at: Optional[str] = None
