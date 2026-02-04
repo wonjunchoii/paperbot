@@ -564,6 +564,12 @@
                     <button id="tab-archive" onclick="switchTab('archive')" class="tab-inactive">
                         Archive
                     </button>
+                    <button id="tab-read" onclick="switchTab('read')" class="tab-inactive">
+                        Read
+                    </button>
+                    <button id="tab-all" onclick="switchTab('all')" class="tab-inactive">
+                        All
+                    </button>
                 </nav>
                 
                 <!-- Search -->
@@ -587,7 +593,9 @@
             <div class="w-2/5 border-r border-border-base bg-surface-elevated flex flex-col">
                 <div class="p-3 border-b border-border-base bg-surface-overlay flex justify-between items-center section-header">
                     <span id="list-title">New Papers</span>
-                    <span class="text-content-muted">날짜순</span>
+                    <button type="button" id="sort-toggle" onclick="toggleSortOrder()" class="text-content-muted hover:text-content-primary transition-colors text-sm" title="클릭하면 날짜 정렬 방향 전환">
+                        <span id="sort-label">▲날짜순</span>
+                    </button>
                 </div>
                 <div id="paper-list" class="flex-1 overflow-y-auto custom-scroll"
                      hx-get="/papers/new" hx-trigger="load" hx-swap="innerHTML">
@@ -618,12 +626,14 @@
     <script>
         let currentTab = 'new';
         let searchTimeout = null;
+        let sortOrder = 'desc';  // desc = newest first (▲), asc = oldest first (▼)
+        const titles = { new: 'New Papers', picked: 'Picked Papers', archive: 'Archived Papers', read: 'Read Papers', all: 'All Papers' };
         
         function switchTab(tab) {
             currentTab = tab;
             
             // Update tab styles
-            ['new', 'picked', 'archive'].forEach(t => {
+            ['new', 'picked', 'archive', 'read', 'all'].forEach(t => {
                 const btn = document.getElementById('tab-' + t);
                 if (t === tab) {
                     btn.classList.remove('tab-inactive');
@@ -634,11 +644,17 @@
                 }
             });
             
-            // Update list title
-            const titles = { new: 'New Papers', picked: 'Picked Papers', archive: 'All Papers' };
+            // Update list title (count will be set after load)
             document.getElementById('list-title').textContent = titles[tab];
             
             // Fetch papers
+            loadPapers();
+        }
+        
+        function toggleSortOrder() {
+            sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
+            const label = document.getElementById('sort-label');
+            label.textContent = sortOrder === 'desc' ? '▲날짜순' : '▼날짜순';
             loadPapers();
         }
         
@@ -648,6 +664,7 @@
             const params = new URLSearchParams();
             if (query) params.set('q', query);
             if (journal) params.set('journal', journal);
+            params.set('order', sortOrder);
             
             const url = '/papers/' + currentTab + (params.toString() ? '?' + params.toString() : '');
             htmx.ajax('GET', url, '#paper-list');
@@ -673,6 +690,17 @@
                     if (badgePicked) badgePicked.textContent = data.picked;
                 });
         }
+        
+        // After paper list load: update list title with count from X-Paper-Count header
+        document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+            const path = (evt.detail.pathInfo && evt.detail.pathInfo.requestPath) || '';
+            if (path.startsWith('/papers/') && evt.detail.xhr) {
+                const count = evt.detail.xhr.getResponseHeader('X-Paper-Count');
+                if (count !== null) {
+                    document.getElementById('list-title').textContent = titles[currentTab] + ' (' + count + ')';
+                }
+            }
+        });
         
         // Listen for statsUpdated event (triggered by HX-Trigger header or manually)
         document.body.addEventListener('statsUpdated', function() {

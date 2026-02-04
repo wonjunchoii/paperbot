@@ -87,10 +87,11 @@ async def papers_new(
     request: Request,
     q: str = Query("", description="Search query"),
     journal: str = Query("", description="Journal filter"),
+    order: str = Query("desc", description="Sort order: asc or desc"),
 ):
     """Get new papers list (partial for HTMX)."""
     journal_filter = journal if journal else None
-    papers = state.repo.find_by_status("new", limit=200, sort_by="id", journal=journal_filter)
+    papers = state.repo.find_by_status("new", limit=200, sort_by="date", order=order, journal=journal_filter)
     
     # Filter by search query if provided
     if q:
@@ -102,16 +103,22 @@ async def papers_new(
             or q_lower in (p.authors or "").lower()
         ]
     
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "partials/paper_list.html",
         {"request": request, "papers": papers, "tab": "new", "empty_message": "새로운 논문이 없습니다. Fetch New 버튼을 클릭하세요."},
     )
+    response.headers["X-Paper-Count"] = str(len(papers))
+    return response
 
 
 @app.get("/papers/picked", response_class=HTMLResponse)
-async def papers_picked(request: Request, q: str = Query("")):
+async def papers_picked(
+    request: Request,
+    q: str = Query(""),
+    order: str = Query("desc", description="Sort order: asc or desc"),
+):
     """Get picked papers list (partial for HTMX)."""
-    papers = state.repo.find_picked(limit=100)
+    papers = state.repo.find_picked(limit=100, order=order)
     
     if q:
         q_lower = q.lower()
@@ -121,10 +128,12 @@ async def papers_picked(request: Request, q: str = Query("")):
             or q_lower in (p.journal or "").lower()
         ]
     
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "partials/paper_list.html",
         {"request": request, "papers": papers, "tab": "picked", "empty_message": "선택된 논문이 없습니다."},
     )
+    response.headers["X-Paper-Count"] = str(len(papers))
+    return response
 
 
 @app.get("/papers/archive", response_class=HTMLResponse)
@@ -132,10 +141,11 @@ async def papers_archive(
     request: Request,
     q: str = Query(""),
     journal: str = Query(""),
+    order: str = Query("desc", description="Sort order: asc or desc"),
 ):
     """Get archived papers list (partial for HTMX)."""
     journal_filter = journal if journal else None
-    papers = state.repo.find_all(limit=500, sort_by="date", journal=journal_filter)
+    papers = state.repo.find_by_status("archived", limit=500, sort_by="date", order=order, journal=journal_filter)
     
     if q:
         q_lower = q.lower()
@@ -145,10 +155,68 @@ async def papers_archive(
             or q_lower in (p.journal or "").lower()
         ]
     
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "partials/paper_list.html",
-        {"request": request, "papers": papers, "tab": "archive", "empty_message": "논문이 없습니다."},
+        {"request": request, "papers": papers, "tab": "archive", "empty_message": "아카이브된 논문이 없습니다."},
     )
+    response.headers["X-Paper-Count"] = str(len(papers))
+    return response
+
+
+@app.get("/papers/read", response_class=HTMLResponse)
+async def papers_read(
+    request: Request,
+    q: str = Query(""),
+    journal: str = Query(""),
+    order: str = Query("desc", description="Sort order: asc or desc"),
+):
+    """Get read papers list (partial for HTMX)."""
+    journal_filter = journal if journal else None
+    papers = state.repo.find_by_status("read", limit=500, sort_by="date", order=order, journal=journal_filter)
+    
+    if q:
+        q_lower = q.lower()
+        papers = [
+            p for p in papers
+            if q_lower in (p.title or "").lower()
+            or q_lower in (p.journal or "").lower()
+            or q_lower in (p.authors or "").lower()
+        ]
+    
+    response = templates.TemplateResponse(
+        "partials/paper_list.html",
+        {"request": request, "papers": papers, "tab": "read", "empty_message": "읽은 논문이 없습니다."},
+    )
+    response.headers["X-Paper-Count"] = str(len(papers))
+    return response
+
+
+@app.get("/papers/all", response_class=HTMLResponse)
+async def papers_all(
+    request: Request,
+    q: str = Query(""),
+    journal: str = Query(""),
+    order: str = Query("desc", description="Sort order: asc or desc"),
+):
+    """Get all papers in DB (partial for HTMX)."""
+    journal_filter = journal if journal else None
+    papers = state.repo.find_all(limit=500, sort_by="date", order=order, journal=journal_filter)
+    
+    if q:
+        q_lower = q.lower()
+        papers = [
+            p for p in papers
+            if q_lower in (p.title or "").lower()
+            or q_lower in (p.journal or "").lower()
+            or q_lower in (p.authors or "").lower()
+        ]
+    
+    response = templates.TemplateResponse(
+        "partials/paper_list.html",
+        {"request": request, "papers": papers, "tab": "all", "empty_message": "논문이 없습니다."},
+    )
+    response.headers["X-Paper-Count"] = str(len(papers))
+    return response
 
 
 # ============================================================================

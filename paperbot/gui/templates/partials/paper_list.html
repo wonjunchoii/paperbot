@@ -34,8 +34,14 @@
                 <span class="text-content-muted">{{ paper.published }}</span>
                 {% endif %}
                 
+                {% if tab == 'all' %}
                 {% if paper.status == 'read' %}
                 <span class="badge-success text-[10px]">READ</span>
+                {% elif paper.status == 'archived' %}
+                <span class="badge-muted text-[10px]">ARCHIVE</span>
+                {% elif paper.status == 'new' %}
+                <span class="badge-primary text-[10px]">NEW</span>
+                {% endif %}
                 {% endif %}
             </div>
             

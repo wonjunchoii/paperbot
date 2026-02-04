@@ -120,6 +120,7 @@ class PaperRepository:
         status: str,
         limit: int = 50,
         sort_by: str = "id",
+        order: str = "desc",
         journal: Optional[str] = None,
     ) -> list[Paper]:
         """Find papers by status (or pseudo-status 'picked' for is_picked=1).
@@ -128,17 +129,19 @@ class PaperRepository:
             status: 'new', 'archived', 'read', or 'picked' (is_picked=1)
             limit: Maximum number of papers to return
             sort_by: Sort key - 'id', 'date', or 'title' (default: id)
+            order: 'asc' or 'desc' for sort direction
             journal: If set, filter by this journal name only.
 
         Returns:
             List of Paper objects
         """
+        direction = "DESC" if order.lower() == "desc" else "ASC"
         order_clauses = {
-            "id": "id ASC",
-            "date": "COALESCE(published, created_at) DESC",
-            "title": "title ASC",
+            "id": f"id {direction}",
+            "date": f"COALESCE(published, created_at) {direction}",
+            "title": f"title {direction}",
         }
-        order = order_clauses.get(sort_by, order_clauses["id"])
+        order_sql = order_clauses.get(sort_by, order_clauses["id"])
 
         # Special case: status='picked' → is_picked=1
         if status == "picked":
@@ -157,7 +160,7 @@ class PaperRepository:
                     SELECT id, source, title, link, doi, published, authors, journal, abstract, status, is_picked, created_at
                     FROM papers
                     WHERE {where_clause}
-                    ORDER BY {order}
+                    ORDER BY {order_sql}
                     LIMIT ?
                     """,
                     params,
@@ -169,7 +172,7 @@ class PaperRepository:
                     SELECT id, source, title, link, doi, published, authors, journal, abstract, status, is_picked, created_at
                     FROM papers
                     WHERE {where_clause}
-                    ORDER BY {order}
+                    ORDER BY {order_sql}
                     LIMIT ?
                     """,
                     params,
@@ -196,23 +199,25 @@ class PaperRepository:
 
         return papers
 
-    def find_picked(self, limit: int = 100) -> list[Paper]:
+    def find_picked(self, limit: int = 100, order: str = "desc") -> list[Paper]:
         """Find picked papers for export (is_picked=1).
 
         Args:
             limit: Maximum number of papers to return
+            order: 'asc' or 'desc' for date sort direction
 
         Returns:
             List of Paper objects
         """
+        direction = "DESC" if order.lower() == "desc" else "ASC"
         with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
-                """
+                f"""
                 SELECT id, source, title, link, doi, published, authors, journal, abstract, status, is_picked, created_at
                 FROM papers
                 WHERE is_picked = 1
-                ORDER BY COALESCE(published, created_at) DESC
+                ORDER BY COALESCE(published, created_at) {direction}
                 LIMIT ?
                 """,
                 (limit,),
@@ -320,23 +325,25 @@ class PaperRepository:
             created_at=row["created_at"],
         )
 
-    def find_all(self, limit: int = 500, sort_by: str = "id", journal: Optional[str] = None) -> list[Paper]:
+    def find_all(self, limit: int = 500, sort_by: str = "id", order: str = "desc", journal: Optional[str] = None) -> list[Paper]:
         """Find papers from all statuses (for archive view).
 
         Args:
             limit: Maximum number of papers to return
             sort_by: 'id', 'date', or 'title'
+            order: 'asc' or 'desc' for sort direction
             journal: If set, filter by this journal name only.
 
         Returns:
             List of Paper objects
         """
+        direction = "DESC" if order.lower() == "desc" else "ASC"
         order_clauses = {
-            "id": "id DESC",
-            "date": "COALESCE(published, created_at) DESC",
-            "title": "title ASC",
+            "id": f"id {direction}",
+            "date": f"COALESCE(published, created_at) {direction}",
+            "title": f"title {direction}",
         }
-        order = order_clauses.get(sort_by, "id DESC")
+        order_sql = order_clauses.get(sort_by, f"id {direction}")
         where_clause = "" if journal is None else "WHERE journal = ?"
         params: tuple = (limit,) if journal is None else (journal, limit)
         with self._connection() as conn:
@@ -346,7 +353,7 @@ class PaperRepository:
                 SELECT id, source, title, link, doi, published, authors, journal, abstract, status, is_picked, created_at
                 FROM papers
                 {where_clause}
-                ORDER BY {order}
+                ORDER BY {order_sql}
                 LIMIT ?
                 """,
                 params,
