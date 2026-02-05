@@ -507,7 +507,7 @@
             align-items: center;
             gap: 0.375rem;
             padding: 0 0.5rem;
-            height: 30px;
+            height: 32px;
             border-radius: 0.375rem;
             font-size: 0.75rem;
             line-height: 1;
@@ -869,7 +869,7 @@
         const titles = { new: 'New Papers', picked: 'Picked Papers', archive: 'Archived Papers', read: 'Read Papers', all: 'All Papers' };
         
         // Keyword filter state
-        let keywords = [];  // Array of { text: string, active: boolean }
+        let keywords = [];  // Array of keyword strings
         let keywordMode = 'or';  // 'or' or 'and'
         
         function updatePaperListSelection(paperId) {
@@ -932,10 +932,9 @@
             if (journal) params.set('journal', journal);
             params.set('order', sortOrder);
             
-            // Add active keywords to params
-            const activeKeywords = keywords.filter(k => k.active).map(k => k.text);
-            if (activeKeywords.length > 0) {
-                params.set('keywords', activeKeywords.join(','));
+            // Add keywords to params
+            if (keywords.length > 0) {
+                params.set('keywords', keywords.join(','));
                 params.set('keyword_mode', keywordMode);
             }
             
@@ -965,8 +964,7 @@
             if (!text) return;
             
             // Check for duplicate
-            const existingIndex = keywords.findIndex(k => k.text.toLowerCase() === text);
-            if (existingIndex >= 0) {
+            if (keywords.includes(text)) {
                 // Shake the existing chip
                 const chips = document.querySelectorAll('.keyword-chip');
                 chips.forEach(chip => {
@@ -979,26 +977,16 @@
                 return;
             }
             
-            // Add new keyword (active by default)
-            keywords.push({ text: text, active: true });
+            // Add new keyword
+            keywords.push(text);
             input.value = '';
             
             renderKeywordChips();
             loadPapers();
         }
         
-        function toggleKeyword(text) {
-            const keyword = keywords.find(k => k.text === text);
-            if (keyword) {
-                keyword.active = !keyword.active;
-                renderKeywordChips();
-                loadPapers();
-            }
-        }
-        
-        function deleteKeyword(text, event) {
-            event.stopPropagation();  // Prevent toggle
-            keywords = keywords.filter(k => k.text !== text);
+        function deleteKeyword(text) {
+            keywords = keywords.filter(k => k !== text);
             renderKeywordChips();
             loadPapers();
         }
@@ -1026,9 +1014,8 @@
                 knob.style.left = '2px';
             }
             
-            // Only reload if there are active keywords
-            const activeKeywords = keywords.filter(k => k.active);
-            if (activeKeywords.length > 1) {
+            // Reload if there are keywords
+            if (keywords.length > 1) {
                 loadPapers();
             }
         }
@@ -1049,13 +1036,12 @@
             
             keywords.forEach(keyword => {
                 const chip = document.createElement('div');
-                chip.className = `keyword-chip ${keyword.active ? 'active' : 'inactive'}`;
-                chip.dataset.keyword = keyword.text;
-                chip.onclick = () => toggleKeyword(keyword.text);
+                chip.className = 'keyword-chip active';
+                chip.dataset.keyword = keyword;
                 
                 chip.innerHTML = `
-                    <span>${escapeHtml(keyword.text)}</span>
-                    <span class="keyword-chip-delete" onclick="deleteKeyword('${escapeHtml(keyword.text)}', event)">
+                    <span>${escapeHtml(keyword)}</span>
+                    <span class="keyword-chip-delete" onclick="deleteKeyword('${escapeHtml(keyword)}')">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
