@@ -6,8 +6,15 @@
      hx-target="#detail-view"
      hx-swap="innerHTML">
     <div class="flex items-start gap-3">
-        <!-- Pick Checkbox: hx-target="this" so response never goes to #detail-view -->
+        <!-- Pick Checkbox: disabled for read status papers -->
         <div class="pt-1" onclick="event.stopPropagation()">
+            {% if paper.status == 'read' %}
+            <input type="checkbox" 
+                   class="w-4 h-4 rounded border-border-base text-content-muted opacity-40 cursor-not-allowed" 
+                   disabled
+                   title="읽은 논문은 Pick할 수 없습니다"
+                   {% if paper.is_picked %}checked{% endif %}>
+            {% else %}
             <input type="checkbox" 
                    class="w-4 h-4 rounded border-border-base text-accent-primary focus:ring-accent-primary cursor-pointer" 
                    hx-post="/actions/pick/{{ paper.id }}"
@@ -16,6 +23,7 @@
                    hx-trigger="click"
                    hx-headers='{"X-Pick-Context": "list"}'
                    {% if paper.is_picked %}checked{% endif %}>
+            {% endif %}
         </div>
         
         <!-- Paper Info -->
