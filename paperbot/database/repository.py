@@ -101,17 +101,47 @@ class PaperRepository:
             conn.commit()
             return cursor.rowcount > 0
 
-    def archive_old_new(self) -> int:
+    def archive_old_new(self) -> list[int]:
         """Archive all papers with status='new' to 'archived'.
         
         Called at the start of fetch to move old 'new' papers out of view.
         
         Returns:
-            Number of papers archived
+            List of paper IDs that were archived
         """
         with self._connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE papers SET status = 'archived' WHERE status = 'new'")
+            # First get IDs of papers to be archived
+            cursor.execute("SELECT id FROM papers WHERE status = 'new'")
+            ids = [row[0] for row in cursor.fetchall()]
+            
+            if ids:
+                cursor.execute("UPDATE papers SET status = 'archived' WHERE status = 'new'")
+                conn.commit()
+            
+            return ids
+
+    def restore_to_new(self, paper_ids: list[int]) -> int:
+        """Restore archived papers back to 'new' status.
+        
+        Used when fetch returns 0 new papers to undo the archive operation.
+        
+        Args:
+            paper_ids: List of paper IDs to restore
+            
+        Returns:
+            Number of papers restored
+        """
+        if not paper_ids:
+            return 0
+            
+        with self._connection() as conn:
+            cursor = conn.cursor()
+            placeholders = ",".join("?" * len(paper_ids))
+            cursor.execute(
+                f"UPDATE papers SET status = 'new' WHERE id IN ({placeholders})",
+                paper_ids,
+            )
             conn.commit()
             return cursor.rowcount
 

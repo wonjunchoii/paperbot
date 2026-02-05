@@ -31,11 +31,12 @@ class PaperBotCLI:
         """Fetch papers from all configured feeds (Crossref calls run in parallel).
         
         Archives existing 'new' papers to 'archived' before fetching.
+        If no new papers are found, restores the archived papers back to 'new'.
         """
         # Archive old 'new' papers first
-        archived_count = self.repo.archive_old_new()
-        if archived_count > 0:
-            self.ui.info(f"Archived {archived_count} old 'new' papers")
+        archived_ids = self.repo.archive_old_new()
+        if archived_ids:
+            self.ui.info(f"Archived {len(archived_ids)} old 'new' papers")
 
         crossref = CrossrefService(self.settings.contact_email)
         feed_service = FeedService(
@@ -67,7 +68,12 @@ class PaperBotCLI:
                     description=f"Processed {total_processed} papers, {total_new} new",
                 )
 
-        self.ui.fetch_complete(total_new)
+        # If no new papers found, restore previously archived papers
+        if total_new == 0 and archived_ids:
+            restored = self.repo.restore_to_new(archived_ids)
+            self.ui.info(f"No new papers found. Restored {restored} papers back to 'new'")
+        else:
+            self.ui.fetch_complete(total_new)
 
     def cmd_list(
         self,

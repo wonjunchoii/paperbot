@@ -337,7 +337,7 @@ def _do_fetch():
     state.fetch_status = {"running": True, "message": "RSS 피드 수집 중...", "complete": False}
     
     try:
-        archived = state.repo.archive_old_new()
+        archived_ids = state.repo.archive_old_new()
         total_new = 0
         total_processed = 0
         workers = min(8, (os.cpu_count() or 2) - 1)
@@ -348,11 +348,21 @@ def _do_fetch():
                 total_new += 1
             total_processed += 1
         
-        state.fetch_status = {
-            "running": False,
-            "message": f"완료: {total_new}개 신규, {total_processed}개 처리됨" + (f" ({archived}개 아카이브됨)" if archived > 0 else ""),
-            "complete": True,
-        }
+        # If no new papers found, restore previously archived papers
+        if total_new == 0 and archived_ids:
+            restored = state.repo.restore_to_new(archived_ids)
+            state.fetch_status = {
+                "running": False,
+                "message": f"신규 논문 없음 ({restored}개 복원됨)",
+                "complete": True,
+            }
+        else:
+            archived_count = len(archived_ids)
+            state.fetch_status = {
+                "running": False,
+                "message": f"완료: {total_new}개 신규, {total_processed}개 처리됨" + (f" ({archived_count}개 아카이브됨)" if archived_count > 0 else ""),
+                "complete": True,
+            }
     except Exception as e:
         state.fetch_status = {"running": False, "message": f"오류: {str(e)}", "complete": True}
 
