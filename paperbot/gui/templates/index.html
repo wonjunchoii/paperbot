@@ -369,7 +369,7 @@
         .paper-item:hover .paper-title {
             color: var(--accent-primary);
         }
-        /* Picked card: slightly darker + border (no badge) */
+        /* Picked card: orange background + border */
         .paper-item-picked {
             background-color: color-mix(in srgb, var(--accent-warning-subtle) 35%, var(--surface-elevated));
             border-left: 3px solid var(--accent-warning);
@@ -378,21 +378,18 @@
         .paper-item-picked:hover {
             background-color: color-mix(in srgb, var(--accent-warning-subtle) 45%, var(--surface-elevated));
         }
-        /* Selected card: dim others so this one stands out; selected one has border + subtle bg */
+        /* Selected card: blue background + border */
         #paper-list .paper-item {
-            transition: opacity 0.2s ease, background-color 0.2s ease, border-left-color 0.2s ease;
-        }
-        #paper-list.has-selection .paper-item {
-            opacity: 0.6;
+            transition: background-color 0.2s ease, border-left-color 0.2s ease;
         }
         #paper-list .paper-item.paper-item-selected {
-            opacity: 1;
             background-color: color-mix(in srgb, var(--accent-primary-subtle) 40%, var(--surface-elevated));
             border-left: 3px solid var(--accent-primary);
         }
+        /* Selected + Picked: orange (picked) takes priority */
         #paper-list .paper-item.paper-item-selected.paper-item-picked {
-            background-color: color-mix(in srgb, var(--accent-primary-subtle) 35%, var(--accent-warning-subtle) 25%, var(--surface-elevated));
-            border-left-color: var(--accent-primary);
+            background-color: color-mix(in srgb, var(--accent-warning-subtle) 50%, var(--surface-elevated));
+            border-left: 3px solid var(--accent-warning);
         }
         
         /* 초록 본문 영역: 독립 박스 */
