@@ -1,6 +1,7 @@
 {% if papers %}
 {% for paper in papers %}
 <div class="paper-item group {% if paper.is_picked %}paper-item-picked{% endif %}"
+     data-paper-id="{{ paper.id }}"
      hx-get="/papers/{{ paper.id }}" 
      hx-target="#detail-view"
      hx-swap="innerHTML">

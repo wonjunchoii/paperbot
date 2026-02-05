@@ -378,6 +378,22 @@
         .paper-item-picked:hover {
             background-color: color-mix(in srgb, var(--accent-warning-subtle) 45%, var(--surface-elevated));
         }
+        /* Selected card: dim others so this one stands out; selected one has border + subtle bg */
+        #paper-list .paper-item {
+            transition: opacity 0.2s ease, background-color 0.2s ease, border-left-color 0.2s ease;
+        }
+        #paper-list.has-selection .paper-item {
+            opacity: 0.6;
+        }
+        #paper-list .paper-item.paper-item-selected {
+            opacity: 1;
+            background-color: color-mix(in srgb, var(--accent-primary-subtle) 40%, var(--surface-elevated));
+            border-left: 3px solid var(--accent-primary);
+        }
+        #paper-list .paper-item.paper-item-selected.paper-item-picked {
+            background-color: color-mix(in srgb, var(--accent-primary-subtle) 35%, var(--accent-warning-subtle) 25%, var(--surface-elevated));
+            border-left-color: var(--accent-primary);
+        }
         
         /* 초록 본문 영역: 독립 박스 */
         .abstract-box {
@@ -627,7 +643,18 @@
         let currentTab = 'new';
         let searchTimeout = null;
         let sortOrder = 'desc';  // desc = newest first (▲), asc = oldest first (▼)
+        let selectedPaperId = null;  // id of paper whose detail is shown
         const titles = { new: 'New Papers', picked: 'Picked Papers', archive: 'Archived Papers', read: 'Read Papers', all: 'All Papers' };
+        
+        function updatePaperListSelection(paperId) {
+            selectedPaperId = paperId;
+            const listEl = document.getElementById('paper-list');
+            if (!listEl) return;
+            listEl.querySelectorAll('.paper-item').forEach(el => {
+                el.classList.toggle('paper-item-selected', el.getAttribute('data-paper-id') === String(paperId));
+            });
+            listEl.classList.toggle('has-selection', paperId != null);
+        }
         
         function switchTab(tab) {
             currentTab = tab;
@@ -699,6 +726,22 @@
                 if (count !== null) {
                     document.getElementById('list-title').textContent = titles[currentTab] + ' (' + count + ')';
                 }
+            }
+            // Detail view loaded: mark the corresponding paper card as selected (path like /papers/42)
+            const detailMatch = path.match(/^\/papers\/(\d+)$/);
+            if (detailMatch) {
+                updatePaperListSelection(parseInt(detailMatch[1], 10));
+            }
+        });
+        
+        // When paper list is re-rendered (tab switch, search), re-apply selection if that paper is in the list
+        document.getElementById('paper-list').addEventListener('htmx:afterSwap', function(evt) {
+            if (selectedPaperId != null) {
+                const listEl = document.getElementById('paper-list');
+                listEl.querySelectorAll('.paper-item').forEach(el => {
+                    el.classList.toggle('paper-item-selected', el.getAttribute('data-paper-id') === String(selectedPaperId));
+                });
+                listEl.classList.toggle('has-selection', listEl.querySelector('.paper-item-selected') != null);
             }
         });
         
