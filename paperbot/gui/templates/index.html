@@ -644,6 +644,7 @@
         let searchTimeout = null;
         let sortOrder = 'desc';  // desc = newest first (▲), asc = oldest first (▼)
         let selectedPaperId = null;  // id of paper whose detail is shown
+        let shouldScrollToSelected = false;  // flag to scroll to selected card after sort change
         const titles = { new: 'New Papers', picked: 'Picked Papers', archive: 'Archived Papers', read: 'Read Papers', all: 'All Papers' };
         
         function updatePaperListSelection(paperId) {
@@ -682,6 +683,8 @@
             sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
             const label = document.getElementById('sort-label');
             label.textContent = sortOrder === 'desc' ? '▲날짜순' : '▼날짜순';
+            // Set flag to scroll to selected card after list reloads
+            shouldScrollToSelected = selectedPaperId != null;
             loadPapers();
         }
         
@@ -734,14 +737,35 @@
             }
         });
         
-        // When paper list is re-rendered (tab switch, search), re-apply selection if that paper is in the list
+        // When paper list is re-rendered (tab switch, search, sort change), re-apply selection and scroll to selected card
         document.getElementById('paper-list').addEventListener('htmx:afterSwap', function(evt) {
             if (selectedPaperId != null) {
                 const listEl = document.getElementById('paper-list');
+                let selectedCard = null;
+                
+                // Re-apply selection styling
                 listEl.querySelectorAll('.paper-item').forEach(el => {
-                    el.classList.toggle('paper-item-selected', el.getAttribute('data-paper-id') === String(selectedPaperId));
+                    const isSelected = el.getAttribute('data-paper-id') === String(selectedPaperId);
+                    el.classList.toggle('paper-item-selected', isSelected);
+                    if (isSelected) {
+                        selectedCard = el;
+                    }
                 });
-                listEl.classList.toggle('has-selection', listEl.querySelector('.paper-item-selected') != null);
+                listEl.classList.toggle('has-selection', selectedCard != null);
+                
+                // Scroll to selected card smoothly if flag is set (sort order changed) and card exists
+                if (shouldScrollToSelected && selectedCard) {
+                    // Use requestAnimationFrame to ensure DOM is fully rendered before scrolling
+                    requestAnimationFrame(() => {
+                        selectedCard.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'nearest'
+                        });
+                    });
+                    // Reset flag after scrolling
+                    shouldScrollToSelected = false;
+                }
             }
         });
         
