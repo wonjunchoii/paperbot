@@ -378,10 +378,14 @@ async def fetch_papers(request: Request, background_tasks: BackgroundTasks):
 @app.get("/actions/fetch-status", response_class=HTMLResponse)
 async def fetch_status(request: Request):
     """Get current fetch status."""
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "partials/fetch_status.html",
         {"request": request, "status": state.fetch_status},
     )
+    # Trigger events when fetch completes
+    if state.fetch_status.get("complete"):
+        response.headers["HX-Trigger"] = "fetchComplete, statsUpdated"
+    return response
 
 
 @app.post("/actions/export", response_class=HTMLResponse)
@@ -391,8 +395,11 @@ async def export_picked(request: Request):
     
     if not picked_papers:
         return HTMLResponse(
-            """<div class="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm">
-                선택된 논문이 없습니다.
+            """<div class="toast toast-warning toast-complete">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <span>선택된 논문이 없습니다.</span>
             </div>"""
         )
     
@@ -402,14 +409,20 @@ async def export_picked(request: Request):
         state.repo.mark_exported(paper_ids)
         
         return HTMLResponse(
-            f"""<div class="px-4 py-2 bg-green-100 text-green-800 rounded-lg text-sm">
-                {len(picked_papers)}개 논문 내보내기 완료!
+            f"""<div class="toast toast-success toast-complete">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>{len(picked_papers)}개 논문 내보내기 완료!</span>
             </div>"""
         )
     except Exception as e:
         return HTMLResponse(
-            f"""<div class="px-4 py-2 bg-red-100 text-red-800 rounded-lg text-sm">
-                오류: {str(e)}
+            f"""<div class="toast toast-error toast-complete">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+                <span>오류: {str(e)}</span>
             </div>"""
         )
 

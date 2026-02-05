@@ -164,6 +164,7 @@
         }
         .btn-primary:hover {
             background-color: var(--accent-primary-hover);
+            transform: translateY(-1px);
         }
         .btn-dark {
             padding: 0.625rem 1rem;
@@ -179,6 +180,7 @@
         }
         .btn-dark:hover {
             opacity: 0.9;
+            transform: translateY(-1px);
         }
         
         /* 탭 컴포넌트 */
@@ -470,6 +472,97 @@
         .loading-indicator {
             display: none;
         }
+        
+        /* Toast 알림 시스템 */
+        .toast-container {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 0;
+            pointer-events: none;
+        }
+        .toast-container > * {
+            margin-bottom: 0.75rem;
+            transition: margin-bottom 0.4s ease-out;
+        }
+        .toast {
+            pointer-events: auto;
+            min-width: 280px;
+            max-width: 360px;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: toastSlideIn 0.3s ease-out;
+        }
+        @keyframes toastSlideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes toastSlideOut {
+            0%, 83% { 
+                opacity: 1; 
+                transform: translateX(0); 
+            }
+            100% {
+                opacity: 0;
+                transform: translateX(120%);
+            }
+        }
+        @keyframes toastCollapse {
+            from { 
+                max-height: 60px;
+                padding-top: 0.75rem;
+                padding-bottom: 0.75rem;
+                margin-bottom: 0.75rem;
+            }
+            to { 
+                max-height: 0;
+                padding-top: 0;
+                padding-bottom: 0;
+                margin-bottom: 0;
+            }
+        }
+        .toast-complete {
+            animation: 
+                toastSlideIn 0.3s ease-out,
+                toastSlideOut 6s ease-out 0.3s forwards,
+                toastCollapse 0.4s ease-out 6.3s forwards;
+            overflow: hidden;
+        }
+        .toast-info {
+            background-color: var(--accent-primary-subtle);
+            color: var(--accent-primary);
+            border: 1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent);
+        }
+        .toast-success {
+            background-color: var(--accent-success-subtle);
+            color: var(--accent-success);
+            border: 1px solid color-mix(in srgb, var(--accent-success) 20%, transparent);
+        }
+        .toast-warning {
+            background-color: var(--accent-warning-subtle);
+            color: var(--accent-warning);
+            border: 1px solid color-mix(in srgb, var(--accent-warning) 20%, transparent);
+        }
+        .toast-error {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid rgba(220, 38, 38, 0.2);
+        }
+        @media (prefers-color-scheme: dark) {
+            .toast-error {
+                background-color: #450a0a;
+                color: #fca5a5;
+                border-color: rgba(252, 165, 165, 0.2);
+            }
+        }
     </style>
 </head>
 <body class="bg-surface-base text-content-primary h-screen flex overflow-hidden" hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
@@ -512,29 +605,19 @@
             <!-- Fetch Button -->
             <button id="fetch-btn"
                     hx-post="/actions/fetch" 
-                    hx-target="#fetch-result" 
+                    hx-target="#fetch-toast-slot" 
                     hx-swap="innerHTML"
                     class="w-full mb-2 btn-primary">
-                <svg class="w-4 h-4 loading-indicator animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
                 <span>Fetch New Papers</span>
             </button>
-            <div id="fetch-result" class="mb-3"></div>
             
             <!-- Export Button -->
             <button hx-post="/actions/export" 
-                    hx-target="#export-result" 
-                    hx-swap="innerHTML"
-                    class="w-full mb-2 btn-dark">
-                <svg class="w-4 h-4 loading-indicator animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                    hx-target="#toast-container" 
+                    hx-swap="beforeend"
+                    class="w-full btn-dark">
                 <span>Export Picked</span>
             </button>
-            <div id="export-result"></div>
         </div>
         
         <!-- Journal Filter -->
@@ -614,7 +697,7 @@
                      hx-get="/papers/new" hx-trigger="load" hx-swap="innerHTML">
                     <div class="p-8 text-center text-content-muted">
                         <div class="loading-indicator">
-                            <svg class="w-8 h-8 mx-auto animate-spin text-accent-primary" fill="none" viewBox="0 0 24 24">
+                            <svg class="w-8 h-8 mx-auto text-accent-primary" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -791,31 +874,82 @@
             }
         });
         
-        // Listen for fetch completion to refresh list and stats
+        // Fetch polling state
+        let fetchPollingInterval = null;
+        
+        // Start polling for fetch status
+        function startFetchPolling() {
+            if (fetchPollingInterval) return; // Already polling
+            
+            fetchPollingInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/actions/fetch-status');
+                    const html = await response.text();
+                    const slot = document.getElementById('fetch-toast-slot');
+                    
+                    // Check if complete by looking for the complete toast in response
+                    if (html.includes('fetch-toast-complete')) {
+                        // Stop polling
+                        clearInterval(fetchPollingInterval);
+                        fetchPollingInterval = null;
+                        
+                        // Update slot with complete toast
+                        slot.innerHTML = html;
+                        
+                        // Refresh list and stats
+                        loadPapers();
+                        htmx.trigger(document.body, 'statsUpdated');
+                        
+                        // Clear slot after animation
+                        setTimeout(() => {
+                            slot.innerHTML = '';
+                        }, 6800);
+                    } else if (html.includes('fetch-toast-running')) {
+                        // Update message only (not replacing entire toast to avoid flicker)
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(html, 'text/html');
+                        const newMessage = doc.querySelector('.fetch-message');
+                        const currentMessage = slot.querySelector('.fetch-message');
+                        if (newMessage && currentMessage) {
+                            currentMessage.textContent = newMessage.textContent;
+                        }
+                    } else {
+                        // No status (not running, not complete) - stop polling
+                        clearInterval(fetchPollingInterval);
+                        fetchPollingInterval = null;
+                    }
+                } catch (e) {
+                    console.error('Fetch polling error:', e);
+                }
+            }, 1000);
+        }
+        
+        // Listen for fetch button click to start polling
         document.body.addEventListener('htmx:afterRequest', function(evt) {
             if (evt.detail.pathInfo.requestPath === '/actions/fetch') {
-                // Poll for fetch status if still running
-                const checkStatus = () => {
-                    htmx.ajax('GET', '/actions/fetch-status', '#fetch-result').then(() => {
-                        const resultEl = document.getElementById('fetch-result');
-                        if (resultEl && resultEl.querySelector('.pulse-dot')) {
-                            setTimeout(checkStatus, 1000);
-                        } else {
-                            // Fetch complete, refresh list and stats
-                            loadPapers();
-                            htmx.trigger(document.body, 'statsUpdated');
-                        }
-                    });
-                };
-                setTimeout(checkStatus, 500);
+                // Start polling after initial fetch request
+                startFetchPolling();
             }
-            
             if (evt.detail.pathInfo.requestPath === '/actions/export') {
                 // Refresh after export
                 loadPapers();
                 htmx.trigger(document.body, 'statsUpdated');
             }
         });
+        
+        // Clean up completed toasts after animation (for export and other toasts)
+        document.body.addEventListener('htmx:afterSettle', function(evt) {
+            // Auto-remove completed toasts in toast-container (not in slots)
+            document.querySelectorAll('#toast-container > .toast-complete').forEach(el => {
+                setTimeout(() => el.remove(), 6800);
+            });
+        });
     </script>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container">
+        <!-- Fetch toast slot (prevents duplicates) -->
+        <div id="fetch-toast-slot"></div>
+    </div>
 </body>
 </html>
