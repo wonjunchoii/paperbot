@@ -189,7 +189,7 @@ async def papers_new(
 ):
     """Get new papers list (partial for HTMX)."""
     journal_filter = journal if journal else None
-    papers = state.repo.find_by_status("new", limit=200, sort_by="date", order=order, journal=journal_filter)
+    papers = state.repo.find_by_status("new", limit=200, sort_by="published", order=order, journal=journal_filter)
     
     # Filter by search query if provided
     if q:

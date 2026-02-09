@@ -169,6 +169,7 @@ class PaperRepository:
         order_clauses = {
             "id": f"id {direction}",
             "date": f"COALESCE(published, created_at) {direction}",
+            "published": f"published {direction}",
             "title": f"title {direction}",
             "created_at": f"created_at {direction}",
         }
@@ -413,6 +414,7 @@ class PaperRepository:
         order_clauses = {
             "id": f"id {direction}",
             "date": f"COALESCE(published, created_at) {direction}",
+            "published": f"published {direction}",
             "title": f"title {direction}",
             "created_at": f"created_at {direction}",
         }
