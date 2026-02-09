@@ -526,6 +526,42 @@ class PaperRepository:
             )
             conn.commit()
 
+    def undo_read(self, paper_id: int) -> bool:
+        """Undo a read: move paper to 'archived' and set is_picked=1.
+
+        Args:
+            paper_id: Paper ID to undo-read
+
+        Returns:
+            True if the paper was updated, False otherwise
+        """
+        with self._connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE papers SET status = 'archived', is_picked = 1 WHERE id = ? AND status = 'read'",
+                (paper_id,),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
+    def revert_undo_read(self, paper_id: int) -> bool:
+        """Revert an undo-read: move paper back to 'read' and set is_picked=0.
+
+        Args:
+            paper_id: Paper ID to revert
+
+        Returns:
+            True if the paper was updated, False otherwise
+        """
+        with self._connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE papers SET status = 'read', is_picked = 0 WHERE id = ? AND status = 'archived'",
+                (paper_id,),
+            )
+            conn.commit()
+            return cursor.rowcount > 0
+
     def reset_all_picked(self) -> int:
         """Set is_picked=0 for all papers.
 

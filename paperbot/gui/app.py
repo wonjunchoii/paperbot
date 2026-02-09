@@ -671,6 +671,55 @@ async def pick_paper(request: Request, paper_id: int):
     return response
 
 
+@app.post("/actions/undo-read/{paper_id}", response_class=HTMLResponse)
+async def undo_read(request: Request, paper_id: int):
+    """Undo read: move paper to archived + picked, show toast with revert."""
+    from fastapi.responses import Response
+
+    paper = state.repo.find_by_id(paper_id)
+    if not paper:
+        return HTMLResponse('<div class="toast toast-error toast-complete"><span>논문을 찾을 수 없습니다.</span></div>')
+
+    state.repo.undo_read(paper_id)
+    title_short = (paper.title or "")[:40]
+    if len(paper.title or "") > 40:
+        title_short += "…"
+
+    toast_html = f"""<div class="toast toast-info" id="undo-read-toast-{paper_id}" style="animation: toastSlideIn 0.3s ease-out;">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
+        <span class="flex-1 text-sm">논문을 'Archive'로 옮겼습니다.</span>
+        <button onclick="revertUndoRead({paper_id}, this)"
+                class="ml-2 px-2 py-0.5 rounded font-semibold text-xs underline underline-offset-2 hover:opacity-80 transition-opacity flex-shrink-0">
+            되돌리기
+        </button>
+    </div>"""
+
+    response = Response(content=toast_html, media_type="text/html")
+    response.headers["HX-Trigger"] = "statsUpdated"
+    return response
+
+
+@app.post("/actions/revert-undo-read/{paper_id}", response_class=HTMLResponse)
+async def revert_undo_read(request: Request, paper_id: int):
+    """Revert undo-read: move paper back to read, is_picked=0."""
+    from fastapi.responses import Response
+
+    state.repo.revert_undo_read(paper_id)
+
+    toast_html = f"""<div class="toast toast-success toast-complete">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l-4-4m0 0l4-4m-4 4h11.586a2 2 0 012 2v2"></path>
+        </svg>
+        <span class="text-sm">논문을 'Read'로 되돌렸습니다.</span>
+    </div>"""
+
+    response = Response(content=toast_html, media_type="text/html")
+    response.headers["HX-Trigger"] = "statsUpdated"
+    return response
+
+
 @app.post("/actions/pick-all", response_class=HTMLResponse)
 async def pick_all(request: Request, ids: str = Form(...)):
     """Pick multiple papers by IDs."""

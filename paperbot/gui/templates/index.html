@@ -1649,6 +1649,51 @@
                 setTimeout(() => el.remove(), 6800);
             });
         });
+        
+        // ============================================
+        // Undo Read: revert + toast management
+        // ============================================
+        
+        function revertUndoRead(paperId, btn) {
+            // Dismiss the current toast immediately
+            const toast = btn.closest('.toast');
+            if (toast) {
+                toast.style.animation = 'toastSlideOut 0.4s ease-out forwards';
+                setTimeout(() => toast.remove(), 400);
+            }
+            
+            // Call revert endpoint
+            fetch('/actions/revert-undo-read/' + paperId, { method: 'POST' })
+                .then(res => res.text())
+                .then(html => {
+                    // Inject revert-success toast
+                    const container = document.getElementById('toast-container');
+                    container.insertAdjacentHTML('beforeend', html);
+                    // Auto-remove after animation
+                    const newToast = container.lastElementChild;
+                    if (newToast) setTimeout(() => newToast.remove(), 6800);
+                    
+                    // Refresh list and stats
+                    loadPapers();
+                    htmx.trigger(document.body, 'statsUpdated');
+                })
+                .catch(err => console.error('Revert undo-read failed:', err));
+        }
+        
+        // After undo-read HTMX response: refresh list + auto-dismiss toast
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            const path = evt.detail.pathInfo.requestPath || '';
+            if (path.match(/^\/actions\/undo-read\/\d+$/)) {
+                loadPapers();
+                // Auto-dismiss undo toast after 8 seconds if user didn't click 되돌리기
+                setTimeout(() => {
+                    document.querySelectorAll('#toast-container > .toast:not(.toast-complete)').forEach(el => {
+                        el.style.animation = 'toastSlideOut 0.6s ease-out forwards';
+                        setTimeout(() => el.remove(), 600);
+                    });
+                }, 8000);
+            }
+        });
     </script>
     
     <!-- Toast Container -->
