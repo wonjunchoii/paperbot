@@ -955,6 +955,31 @@
         .sort-dropdown-item.hidden-option {
             display: none;
         }
+        /* Export dropdown – same animation as sort dropdown */
+        .export-dropdown {
+            position: absolute;
+            left: 0;
+            top: calc(100% + 8px);
+            width: 220px;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-base);
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05);
+            padding: 8px 0;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(-6px);
+            transform-origin: top center;
+            transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+        }
+        .export-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
         .sort-check {
             font-size: 12px;
             font-weight: 600;
@@ -1169,13 +1194,48 @@
                 <span>Fetch New Papers</span>
             </button>
             
-            <!-- Export Buttons -->
-            <button hx-post="/actions/export" 
-                    hx-target="#toast-container" 
-                    hx-swap="beforeend"
-                    class="w-full btn-dark">
-                <span>Export Picked</span>
-            </button>
+            <!-- Export Dropdown (sample.html style) -->
+            <div class="export-wrapper relative">
+                <button type="button" id="export-menu-btn" onclick="toggleExportMenu()" class="w-full btn-dark flex items-center justify-center gap-2">
+                    <span>Export Papers</span>
+                    <span id="export-arrow" class="inline-block text-sm opacity-80">▾</span>
+                </button>
+                <div id="export-dropdown" class="export-dropdown">
+                    <div class="px-3 py-1 text-[11px] text-content-muted uppercase tracking-wide">Export Picked Papers</div>
+                    <div class="export-row flex items-center gap-2 px-3 py-2 hover:bg-surface-overlay hover:text-accent-primary cursor-pointer relative" data-export-type="picked" data-export-count="{{ stats.picked }}" onclick="handleExportRowClick(this, event)">
+                        <span class="w-[7.5em] shrink-0 text-sm">Export Picked</span>
+                        <span id="export-picked-badge" class="text-[11px] bg-accent-primary/10 px-1.5 py-0.5 rounded text-accent-primary">{{ stats.picked }}</span>
+                        <span class="ml-auto text-content-muted">›</span>
+                        <div class="export-submenu hidden absolute left-full top-0 ml-1 w-40 bg-surface-elevated border border-border-base rounded-lg shadow-lg py-1 z-[101] text-content-primary" onclick="event.stopPropagation()">
+                            <button type="button" onclick="doExportPicked('tex'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">BibTeX (.bib)</button>
+                            <button type="button" onclick="doExportPicked('md'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Markdown (.md)</button>
+                            <button type="button" onclick="doExportPicked('csv'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Excel (.csv)</button>
+                        </div>
+                    </div>
+                    <div class="h-px bg-border-base my-1 mx-2"></div>
+                    <div class="px-3 py-1 text-[11px] text-content-muted uppercase tracking-wide">Export Read Papers</div>
+                    <div class="export-row flex items-center gap-2 px-3 py-2 hover:bg-surface-overlay hover:text-accent-primary cursor-pointer relative" data-export-type="read-all" data-export-count="{{ stats.read }}" onclick="handleExportRowClick(this, event)">
+                        <span class="w-[7.5em] shrink-0 text-sm">Export All Read</span>
+                        <span id="export-read-all-badge" class="text-[11px] bg-accent-primary/10 px-1.5 py-0.5 rounded text-accent-primary">{{ stats.read }}</span>
+                        <span class="ml-auto text-content-muted">›</span>
+                        <div class="export-submenu hidden absolute left-full top-0 ml-1 w-40 bg-surface-elevated border border-border-base rounded-lg shadow-lg py-1 z-[101] text-content-primary" onclick="event.stopPropagation()">
+                            <button type="button" onclick="doExportRead('all', 'tex'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">BibTeX (.bib)</button>
+                            <button type="button" onclick="doExportRead('all', 'md'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Markdown (.md)</button>
+                            <button type="button" onclick="doExportRead('all', 'csv'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Excel (.csv)</button>
+                        </div>
+                    </div>
+                    <div class="export-row flex items-center gap-2 px-3 py-2 hover:bg-accent-primary-subtle hover:text-accent-primary cursor-pointer font-semibold relative" data-export-type="filtered" data-export-count="0" onclick="handleExportRowClick(this, event)">
+                        <span class="w-[7.5em] shrink-0 text-sm">Export Filtered</span>
+                        <span id="export-filtered-badge" class="text-[11px] bg-accent-primary/10 px-1.5 py-0.5 rounded text-accent-primary">0</span>
+                        <span class="ml-auto text-content-muted">›</span>
+                        <div class="export-submenu hidden absolute left-full top-0 ml-1 w-40 bg-surface-elevated border border-border-base rounded-lg shadow-lg py-1 z-[101] text-content-primary" onclick="event.stopPropagation()">
+                            <button type="button" onclick="doExportRead('filtered', 'tex'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">BibTeX (.bib)</button>
+                            <button type="button" onclick="doExportRead('filtered', 'md'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Markdown (.md)</button>
+                            <button type="button" onclick="doExportRead('filtered', 'csv'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Excel (.csv)</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <!-- Journal Filter -->
@@ -1579,6 +1639,77 @@
             const url = '/papers/' + currentTab + (params.toString() ? '?' + params.toString() : '');
             htmx.ajax('GET', url, '#paper-list');
         }
+        
+        // Export dropdown
+        function toggleExportMenu() {
+            const menu = document.getElementById('export-dropdown');
+            const arrow = document.getElementById('export-arrow');
+            if (!menu) return;
+            menu.classList.toggle('show');
+            if (arrow) arrow.classList.toggle('rotate-180', menu.classList.contains('show'));
+            if (menu.classList.contains('show')) {
+                document.querySelectorAll('.export-submenu').forEach(s => s.classList.add('hidden'));
+            }
+        }
+        function closeExportMenu() {
+            const menu = document.getElementById('export-dropdown');
+            const arrow = document.getElementById('export-arrow');
+            if (menu) menu.classList.remove('show');
+            if (arrow) arrow.classList.remove('rotate-180');
+        }
+        const EXPORT_DISABLED_MESSAGES = {
+            'picked': '선택된 논문이 없습니다.',
+            'read-all': '읽은 논문이 없습니다.',
+            'filtered': '필터된 읽은 논문이 없습니다.'
+        };
+        function handleExportRowClick(rowEl, evt) {
+            const count = parseInt(rowEl.dataset.exportCount || '0', 10);
+            if (count === 0) {
+                const type = rowEl.dataset.exportType || 'picked';
+                showToast('warning', EXPORT_DISABLED_MESSAGES[type] || '내보낼 논문이 없습니다.');
+                return;
+            }
+            const sub = rowEl.querySelector('.export-submenu');
+            if (!sub) return;
+            const isOpen = !sub.classList.contains('hidden');
+            document.querySelectorAll('.export-row').forEach(r => {
+                const s = r.querySelector('.export-submenu');
+                if (s) s.classList.add('hidden');
+            });
+            if (!isOpen) sub.classList.remove('hidden');
+        }
+        function updateExportRowState(rowSelector, count) {
+            const row = document.querySelector(rowSelector);
+            if (!row) return;
+            const n = parseInt(count, 10) || 0;
+            row.dataset.exportCount = String(n);
+        }
+        function doExportPicked(format) {
+            htmx.ajax('POST', '/actions/export', {
+                target: '#toast-container',
+                swap: 'beforeend',
+                values: { format: format }
+            });
+        }
+        function doExportRead(scope, format) {
+            const values = { scope: scope, format: format };
+            if (scope === 'filtered') {
+                values.q = document.getElementById('search-input').value || '';
+                values.journal = document.getElementById('journal-filter').value || '';
+                values.keywords = keywords.join(',');
+                values.keyword_mode = keywordMode;
+                values.date_from = dateFrom || '';
+                values.date_to = dateTo || '';
+            }
+            htmx.ajax('POST', '/actions/export-read', {
+                target: '#toast-container',
+                swap: 'beforeend',
+                values: values
+            });
+        }
+        document.addEventListener('click', function(evt) {
+            if (!evt.target.closest('.export-wrapper')) closeExportMenu();
+        });
         
         function debouncedSearch() {
             clearTimeout(searchTimeout);
@@ -2018,7 +2149,7 @@
             updateSortOrderIcon();
         });
         
-        // Update tab badges with fresh counts
+        // Update tab badges and export dropdown badges with fresh counts
         function updateBadges() {
             fetch('/stats/badges')
                 .then(res => res.json())
@@ -2027,16 +2158,30 @@
                     const badgePicked = document.getElementById('badge-picked');
                     if (badgeNew) badgeNew.textContent = data.new;
                     if (badgePicked) badgePicked.textContent = data.picked;
+                    const exportPickedBadge = document.getElementById('export-picked-badge');
+                    const exportReadAllBadge = document.getElementById('export-read-all-badge');
+                    const pickedCount = String(data.picked ?? 0);
+                    const readCount = String(data.read ?? 0);
+                    if (exportPickedBadge) exportPickedBadge.textContent = pickedCount;
+                    if (exportReadAllBadge) exportReadAllBadge.textContent = readCount;
+                    updateExportRowState('.export-wrapper .export-row[data-export-type="picked"]', pickedCount);
+                    updateExportRowState('.export-wrapper .export-row[data-export-type="read-all"]', readCount);
                 });
         }
         
-        // After paper list load: update list title with count from X-Paper-Count header
+        // After paper list load: update list title and export filtered badge from X-Paper-Count header
         document.body.addEventListener('htmx:afterOnLoad', function(evt) {
             const path = (evt.detail.pathInfo && evt.detail.pathInfo.requestPath) || '';
             if (path.startsWith('/papers/') && evt.detail.xhr) {
                 const count = evt.detail.xhr.getResponseHeader('X-Paper-Count');
                 if (count !== null) {
                     document.getElementById('list-title').textContent = titles[currentTab] + ' (' + count + ')';
+                    const filteredBadge = document.getElementById('export-filtered-badge');
+                    if (filteredBadge) {
+                        const filteredCount = currentTab === 'read' ? count : '0';
+                        filteredBadge.textContent = filteredCount;
+                        updateExportRowState('.export-wrapper .export-row[data-export-type="filtered"]', filteredCount);
+                    }
                 }
             }
             // Detail view loaded: mark the corresponding paper card as selected (path like /papers/42)

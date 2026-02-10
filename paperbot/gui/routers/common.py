@@ -48,9 +48,13 @@ async def get_stats(request: Request):
 
 @router.get("/stats/badges", response_class=HTMLResponse)
 async def get_badges(request: Request):
-    """Get badge counts as JSON for tab updates."""
+    """Get badge counts as JSON for tab updates and export dropdown."""
     stats = state.repo.get_status_counts()
-    return JSONResponse({"new": stats.get("new", 0), "picked": stats.get("picked", 0)})
+    return JSONResponse({
+        "new": stats.get("new", 0),
+        "picked": stats.get("picked", 0),
+        "read": stats.get("read", 0),
+    })
 
 
 @router.get("/date-range")

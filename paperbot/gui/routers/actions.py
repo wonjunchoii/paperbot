@@ -1,10 +1,12 @@
 """Action routes: fetch, export, pick/unpick, undo-read, AI ranking trigger."""
 
 import os
+from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, Form, Request
 from fastapi.responses import HTMLResponse, Response
 
+from paperbot.gui.helpers import filter_by_date, filter_by_keywords
 from paperbot.gui.state import (
     compute_rankings,
     invalidate_rankings,
@@ -110,44 +112,103 @@ async def fetch_status(request: Request):
 # ============================================================================
 
 
-@router.post("/actions/export", response_class=HTMLResponse)
-async def export_picked(request: Request):
-    """Export picked papers to markdown."""
-    picked_papers = state.repo.find_picked()
-
-    if not picked_papers:
-        return HTMLResponse(
-            """<div class="toast toast-warning toast-auto">
-                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
-                <span>선택된 논문이 없습니다.</span>
-            </div>"""
-        )
-
-    try:
-        filepath = state.exporter.export(picked_papers)
-        paper_ids = [p.id for p in picked_papers if p.id is not None]
-        state.repo.mark_exported(paper_ids)
-        invalidate_rankings()  # library changed -> recompute next time
-
-        return HTMLResponse(
-            f"""<div class="toast toast-success toast-auto">
+def _toast_success(n: int, path_str: str) -> str:
+    return f"""<div class="toast toast-success toast-auto">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
-                <span>{len(picked_papers)}개 논문 내보내기 완료!</span>
+                <span>{n}개 논문<br>'{path_str}'<br>에 저장되었습니다.</span>
             </div>"""
-        )
-    except Exception as e:
-        return HTMLResponse(
-            f"""<div class="toast toast-error toast-auto">
+
+
+def _toast_warning(message: str) -> str:
+    return f"""<div class="toast toast-warning toast-auto">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <span>{message}</span>
+            </div>"""
+
+
+def _toast_error(message: str) -> str:
+    return f"""<div class="toast toast-error toast-auto">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
-                <span>오류: {str(e)}</span>
+                <span>{message}</span>
             </div>"""
-        )
+
+
+@router.post("/actions/export", response_class=HTMLResponse)
+async def export_picked(
+    request: Request,
+    format: str = Form("md"),
+):
+    """Export picked papers in chosen format (tex/md/csv) to exports/picked/."""
+    picked_papers = state.repo.find_picked()
+    if not picked_papers:
+        return HTMLResponse(_toast_warning("선택된 논문이 없습니다."))
+
+    fmt: Literal["tex", "md", "csv"] = "md"
+    if format in ("tex", "md", "csv"):
+        fmt = format
+
+    try:
+        filepath = state.exporter.export(picked_papers, subdir="picked", format=fmt)
+        paper_ids = [p.id for p in picked_papers if p.id is not None]
+        state.repo.mark_exported(paper_ids)
+        invalidate_rankings()
+
+        resp = HTMLResponse(_toast_success(len(picked_papers), str(filepath.resolve())))
+        resp.headers["HX-Trigger"] = "statsUpdated"
+        return resp
+    except Exception as e:
+        return HTMLResponse(_toast_error(f"오류: {str(e)}"))
+
+
+@router.post("/actions/export-read", response_class=HTMLResponse)
+async def export_read(
+    request: Request,
+    scope: str = Form(...),  # "all" | "filtered"
+    format: str = Form("md"),
+    q: str = Form(""),
+    journal: str = Form(""),
+    keywords: str = Form(""),
+    keyword_mode: str = Form("or"),
+    date_from: str = Form(""),
+    date_to: str = Form(""),
+):
+    """Export read papers: scope=all (all read) or scope=filtered (current filters). Saves to exports/read/."""
+    if scope == "all":
+        papers = state.repo.find_by_status("read", limit=5000, sort_by="created_at", order="desc", journal=None)
+    else:
+        papers = state.repo.find_by_status("read", limit=5000, sort_by="created_at", order="desc", journal=journal or None)
+        if q:
+            q_lower = q.lower()
+            papers = [
+                p for p in papers
+                if q_lower in (p.title or "").lower()
+                or q_lower in (p.journal or "").lower()
+                or q_lower in (p.authors or "").lower()
+            ]
+        if keywords:
+            kw_list = [k.strip() for k in keywords.split(",") if k.strip()]
+            papers = filter_by_keywords(papers, kw_list, keyword_mode)
+        if date_from or date_to:
+            papers = filter_by_date(papers, date_from or None, date_to or None, "created_at")
+
+    if not papers:
+        return HTMLResponse(_toast_warning("내보낼 읽은 논문이 없습니다."))
+
+    fmt: Literal["tex", "md", "csv"] = "md"
+    if format in ("tex", "md", "csv"):
+        fmt = format
+
+    try:
+        filepath = state.exporter.export(papers, subdir="read", format=fmt)
+        return HTMLResponse(_toast_success(len(papers), str(filepath.resolve())))
+    except Exception as e:
+        return HTMLResponse(_toast_error(f"오류: {str(e)}"))
 
 
 # ============================================================================
