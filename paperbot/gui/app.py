@@ -419,11 +419,49 @@ def _filter_by_date(
     return [p for p in papers if in_range(p)]
 
 
+def _sort_papers(
+    papers: list[Paper],
+    sort_by: str,
+    order: str,
+    scores: dict | None = None,
+) -> list[Paper]:
+    """Sort papers by the specified criteria (in-place).
+
+    Args:
+        papers: List of papers to sort
+        sort_by: 'published', 'created_at', 'title', 'journal', or 'score'
+        order: 'asc' or 'desc'
+        scores: AI match scores dict (paper_id -> score), used when sort_by='score'
+
+    Returns:
+        The same list, sorted in-place
+    """
+    reverse = order == "desc"
+
+    if sort_by == "score":
+        if scores:
+            papers.sort(key=lambda p: scores.get(p.id, -1), reverse=reverse)
+        else:
+            # Fallback to published when scores not available
+            papers.sort(key=lambda p: p.published or "", reverse=reverse)
+    elif sort_by == "created_at":
+        papers.sort(key=lambda p: p.created_at or "", reverse=reverse)
+    elif sort_by == "title":
+        papers.sort(key=lambda p: (p.title or "").lower(), reverse=reverse)
+    elif sort_by == "journal":
+        papers.sort(key=lambda p: (p.journal or "").lower(), reverse=reverse)
+    else:  # 'published' or any unrecognized value
+        papers.sort(key=lambda p: p.published or "", reverse=reverse)
+
+    return papers
+
+
 @app.get("/papers/new", response_class=HTMLResponse)
 async def papers_new(
     request: Request,
     q: str = Query("", description="Search query"),
     journal: str = Query("", description="Journal filter"),
+    sort_by: str = Query("score", description="Sort criteria"),
     order: str = Query("desc", description="Sort order: asc or desc"),
     keywords: str = Query("", description="Comma-separated keywords"),
     keyword_mode: str = Query("or", description="Keyword match mode: or/and"),
@@ -432,7 +470,7 @@ async def papers_new(
 ):
     """Get new papers list (partial for HTMX)."""
     journal_filter = journal if journal else None
-    papers = state.repo.find_by_status("new", limit=200, sort_by="published", order=order, journal=journal_filter)
+    papers = state.repo.find_by_status("new", limit=200, sort_by="published", order="desc", journal=journal_filter)
     
     # Filter by search query if provided
     if q:
@@ -463,12 +501,12 @@ async def papers_new(
         top_ids = state._ranking_top_ids
         gold_ids = state._ranking_gold_ids
         blue_ids = state._ranking_blue_ids
-        # Sort by AI score descending so the most relevant papers
-        # (and their badges) appear at the top of the list.
-        papers.sort(key=lambda p: scores.get(p.id, -1), reverse=True)
     elif not state._ranking_computing:
         # Kick off background computation so next reload has scores
         _start_ranking_bg()
+    
+    # Apply sorting
+    _sort_papers(papers, sort_by, order, scores)
     
     response = templates.TemplateResponse(
         "partials/paper_list.html",
@@ -491,6 +529,7 @@ async def papers_new(
 async def papers_picked(
     request: Request,
     q: str = Query(""),
+    sort_by: str = Query("published", description="Sort criteria"),
     order: str = Query("desc", description="Sort order: asc or desc"),
     keywords: str = Query("", description="Comma-separated keywords"),
     keyword_mode: str = Query("or", description="Keyword match mode: or/and"),
@@ -498,7 +537,7 @@ async def papers_picked(
     date_to: str = Query("", description="End date (YYYY-MM-DD)"),
 ):
     """Get picked papers list (partial for HTMX)."""
-    papers = state.repo.find_picked(limit=100, order=order)
+    papers = state.repo.find_picked(limit=100, order="desc")
     
     if q:
         q_lower = q.lower()
@@ -516,6 +555,9 @@ async def papers_picked(
     # Filter by date range
     if date_from or date_to:
         papers = _filter_by_date(papers, date_from or None, date_to or None, "published")
+    
+    # Apply sorting
+    _sort_papers(papers, sort_by, order)
     
     response = templates.TemplateResponse(
         "partials/paper_list.html",
@@ -530,6 +572,7 @@ async def papers_archive(
     request: Request,
     q: str = Query(""),
     journal: str = Query(""),
+    sort_by: str = Query("published", description="Sort criteria"),
     order: str = Query("desc", description="Sort order: asc or desc"),
     keywords: str = Query("", description="Comma-separated keywords"),
     keyword_mode: str = Query("or", description="Keyword match mode: or/and"),
@@ -538,7 +581,7 @@ async def papers_archive(
 ):
     """Get archived papers list (partial for HTMX)."""
     journal_filter = journal if journal else None
-    papers = state.repo.find_by_status("archived", limit=500, sort_by="date", order=order, journal=journal_filter)
+    papers = state.repo.find_by_status("archived", limit=500, sort_by="date", order="desc", journal=journal_filter)
     
     if q:
         q_lower = q.lower()
@@ -557,6 +600,9 @@ async def papers_archive(
     if date_from or date_to:
         papers = _filter_by_date(papers, date_from or None, date_to or None, "published")
     
+    # Apply sorting
+    _sort_papers(papers, sort_by, order)
+    
     response = templates.TemplateResponse(
         "partials/paper_list.html",
         {"request": request, "papers": papers, "tab": "archive", "empty_message": "아카이브된 논문이 없습니다."},
@@ -570,6 +616,7 @@ async def papers_read(
     request: Request,
     q: str = Query(""),
     journal: str = Query(""),
+    sort_by: str = Query("created_at", description="Sort criteria"),
     order: str = Query("desc", description="Sort order: asc or desc"),
     keywords: str = Query("", description="Comma-separated keywords"),
     keyword_mode: str = Query("or", description="Keyword match mode: or/and"),
@@ -578,7 +625,7 @@ async def papers_read(
 ):
     """Get read papers list (partial for HTMX). Sorted by created_at (read date)."""
     journal_filter = journal if journal else None
-    papers = state.repo.find_by_status("read", limit=500, sort_by="created_at", order=order, journal=journal_filter)
+    papers = state.repo.find_by_status("read", limit=500, sort_by="created_at", order="desc", journal=journal_filter)
     
     if q:
         q_lower = q.lower()
@@ -598,6 +645,9 @@ async def papers_read(
     if date_from or date_to:
         papers = _filter_by_date(papers, date_from or None, date_to or None, "created_at")
     
+    # Apply sorting
+    _sort_papers(papers, sort_by, order)
+    
     response = templates.TemplateResponse(
         "partials/paper_list.html",
         {"request": request, "papers": papers, "tab": "read", "empty_message": "읽은 논문이 없습니다."},
@@ -611,6 +661,7 @@ async def papers_all(
     request: Request,
     q: str = Query(""),
     journal: str = Query(""),
+    sort_by: str = Query("published", description="Sort criteria"),
     order: str = Query("desc", description="Sort order: asc or desc"),
     keywords: str = Query("", description="Comma-separated keywords"),
     keyword_mode: str = Query("or", description="Keyword match mode: or/and"),
@@ -619,7 +670,7 @@ async def papers_all(
 ):
     """Get all papers in DB (partial for HTMX)."""
     journal_filter = journal if journal else None
-    papers = state.repo.find_all(limit=500, sort_by="date", order=order, journal=journal_filter)
+    papers = state.repo.find_all(limit=500, sort_by="date", order="desc", journal=journal_filter)
     
     if q:
         q_lower = q.lower()
@@ -638,6 +689,9 @@ async def papers_all(
     # Filter by date range
     if date_from or date_to:
         papers = _filter_by_date(papers, date_from or None, date_to or None, "published")
+    
+    # Apply sorting
+    _sort_papers(papers, sort_by, order)
     
     response = templates.TemplateResponse(
         "partials/paper_list.html",
