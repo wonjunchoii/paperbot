@@ -872,60 +872,124 @@
             background-color: var(--accent-primary-hover);
         }
         
-        /* 정렬 드롭다운 */
-        .sort-select {
-            appearance: none;
-            -webkit-appearance: none;
-            padding: 0.2rem 1.25rem 0.2rem 0.5rem;
-            font-size: 0.6875rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            color: var(--content-muted);
-            background-color: transparent;
-            border: 1px solid var(--border-base);
-            border-radius: 0.375rem;
-            outline: none;
+        /* ── Sort Dropdown (Custom) ── */
+        .sort-wrapper {
+            position: relative;
+            user-select: none;
+        }
+        .sort-trigger {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            padding: 2px 0 2px 0.4px;
+            border-radius: 5px;
             cursor: pointer;
-            transition: all 0.15s ease;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 20 20' fill='%2394a3b8'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 0.3rem center;
+            transition: background 0.2s;
         }
-        .sort-select:hover {
-            color: var(--content-primary);
-            border-color: color-mix(in srgb, var(--accent-primary) 50%, var(--border-base));
+        .sort-trigger:hover {
+            background: color-mix(in srgb, var(--content-primary) 6%, transparent);
         }
-        .sort-select:focus {
-            color: var(--content-primary);
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 15%, transparent);
+        .sort-selected-text {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--content-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
         }
-        .sort-select option {
-            background-color: var(--surface-elevated);
+        .sort-chevron {
+            color: var(--content-muted);
+            transition: color 0.2s, transform 0.3s ease;
+            flex-shrink: 0;
+        }
+        .sort-trigger:hover .sort-chevron {
             color: var(--content-primary);
+        }
+        .sort-chevron.open {
+            transform: rotate(180deg);
+        }
+        /* Dropdown panel */
+        .sort-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            min-width: 155px;
+            background: var(--surface-elevated);
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05);
+            padding: 5px 4px;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(-6px);
+            transform-origin: top center;
+            transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+        }
+        .sort-dropdown.show {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+        .sort-dropdown-item {
+            padding: 6px 10px;
+            color: var(--content-secondary);
             font-size: 0.8125rem;
             font-weight: 500;
-            text-transform: none;
-            letter-spacing: 0;
-            padding: 0.375rem 0.5rem;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.15s;
+            white-space: nowrap;
         }
-        .sort-order-btn {
+        .sort-dropdown-item:hover {
+            background: var(--accent-muted-subtle);
+        }
+        .sort-dropdown-item.active {
+            font-weight: 700;
+            color: var(--content-primary);
+        }
+        .sort-dropdown-item.hidden-option {
+            display: none;
+        }
+        .sort-check {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--content-muted);
+            margin-left: 8px;
+        }
+        /* ── Sort Direction Icon ── */
+        .sort-direction-icon {
             display: flex;
             align-items: center;
             justify-content: center;
             width: 22px;
             height: 22px;
-            border-radius: 0.25rem;
-            color: var(--content-muted);
+            border-radius: 6px;
+            background: var(--accent-muted-subtle);
             border: 1px solid var(--border-base);
-            transition: all 0.15s ease;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--content-muted);
             flex-shrink: 0;
         }
-        .sort-order-btn:hover {
-            color: var(--accent-primary);
-            border-color: var(--accent-primary);
-            background-color: var(--accent-primary-subtle);
+        .sort-direction-icon:hover {
+            background: var(--surface-overlay);
+            border-color: color-mix(in srgb, var(--content-muted) 30%, var(--border-base));
+            color: var(--content-primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .sort-direction-icon:active {
+            transform: scale(0.93);
+        }
+        .sort-direction-icon svg path {
+            transition: fill 0.2s;
+        }
+        .sort-direction-icon svg path.active {
+            fill: var(--content-primary);
         }
 
         /* HTMX 로딩 인디케이터 */
@@ -1219,19 +1283,41 @@
                     <!-- Row 1: Tab info + Sort -->
                     <div class="px-3 py-1 flex justify-between items-center section-header">
                         <span id="list-title">New Papers</span>
-                        <div class="flex items-center gap-1">
-                            <select id="sort-criteria" onchange="changeSortCriteria()" class="sort-select">
-                                <option value="score">Top Matched</option>
-                                <option value="published">Latest Published</option>
-                                <option value="created_at">Recently Added</option>
-                                <option value="title">Title (A-Z)</option>
-                                <option value="journal">Journal Name</option>
-                            </select>
-                            <button type="button" id="sort-order-btn" onclick="toggleSortOrder()" class="sort-order-btn" title="정렬 방향 전환">
-                                <svg id="sort-order-icon" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                        <div class="flex items-center gap-0.5" style="width: 204px;">
+                            <span class="section-header opacity-60 shrink-0">Sort by:</span>
+                            <div class="flex-1"></div>
+                            <div id="sort-wrapper" class="sort-wrapper">
+                                <div class="sort-trigger" onclick="toggleSortDropdown(event)">
+                                    <span id="sort-selected-text" class="sort-selected-text">Matching Score</span>
+                                    <svg id="sort-chevron" class="sort-chevron" width="14" height="14" viewBox="0 0 24 24">
+                                        <path d="M7 10l5 5 5-5z" fill="currentColor"/>
+                                    </svg>
+                                </div>
+                                <div id="sort-dropdown" class="sort-dropdown">
+                                    <div class="sort-dropdown-item active" data-value="score" onclick="selectSortOption(this, event)">
+                                        <span>Matching Score</span>
+                                        <span class="sort-check">&#10003;</span>
+                                    </div>
+                                    <div class="sort-dropdown-item" data-value="published" onclick="selectSortOption(this, event)">
+                                        <span>Published Date</span>
+                                    </div>
+                                    <div class="sort-dropdown-item" data-value="created_at" onclick="selectSortOption(this, event)">
+                                        <span>Date Added</span>
+                                    </div>
+                                    <div class="sort-dropdown-item" data-value="title" onclick="selectSortOption(this, event)">
+                                        <span>Title</span>
+                                    </div>
+                                    <div class="sort-dropdown-item" data-value="journal" onclick="selectSortOption(this, event)">
+                                        <span>Journal</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="sort-direction-icon" onclick="toggleSortOrder(event)" title="정렬 방향 전환">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <path class="sort-arrow-up" d="M7 10L12 5L17 10H7Z" fill="currentColor"/>
+                                    <path class="sort-arrow-down active" d="M7 14L12 19L17 14H7Z" fill="currentColor"/>
                                 </svg>
-                            </button>
+                            </div>
                         </div>
                     </div>
                     <!-- Row 2: Date Filter -->
@@ -1344,41 +1430,82 @@
             listEl.classList.toggle('has-selection', paperId != null);
         }
         
+        // Sort option labels (value → display text)
+        const sortLabels = {
+            score: 'Matching Score',
+            published: 'Published Date',
+            created_at: 'Date Added',
+            title: 'Title',
+            journal: 'Journal',
+        };
+        
         function updateSortDropdown() {
-            const select = document.getElementById('sort-criteria');
-            const scoreOption = select.querySelector('option[value="score"]');
+            const scoreItem = document.querySelector('.sort-dropdown-item[data-value="score"]');
             
-            // Show/hide "Top Matched" option based on tab (new tab only)
+            // Show/hide "Matching Score" option (new tab only)
             if (currentTab === 'new') {
-                scoreOption.style.display = '';
+                scoreItem.classList.remove('hidden-option');
             } else {
-                scoreOption.style.display = 'none';
-                // If current criteria is score but not on new tab, switch to default
+                scoreItem.classList.add('hidden-option');
                 if (sortCriteria === 'score') {
                     sortCriteria = defaultSortByTab[currentTab];
                 }
             }
             
-            select.value = sortCriteria;
+            // Update active state + header text
+            document.querySelectorAll('.sort-dropdown-item').forEach(item => {
+                const isActive = item.dataset.value === sortCriteria;
+                item.classList.toggle('active', isActive);
+                // Add/remove check mark
+                const existingCheck = item.querySelector('.sort-check');
+                if (isActive && !existingCheck) {
+                    const check = document.createElement('span');
+                    check.className = 'sort-check';
+                    check.innerHTML = '&#10003;';
+                    item.appendChild(check);
+                } else if (!isActive && existingCheck) {
+                    existingCheck.remove();
+                }
+            });
+            
+            document.getElementById('sort-selected-text').textContent = sortLabels[sortCriteria] || sortCriteria;
         }
         
         function updateSortOrderIcon() {
-            const icon = document.getElementById('sort-order-icon');
-            const btn = document.getElementById('sort-order-btn');
+            const upArrow = document.querySelector('.sort-arrow-up');
+            const downArrow = document.querySelector('.sort-arrow-down');
+            const dirBtn = document.querySelector('.sort-direction-icon');
             if (sortOrder === 'desc') {
-                // Down arrow (↓ Descending)
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>';
-                btn.title = '내림차순 (최신/높은 점수 먼저)';
+                upArrow.classList.remove('active');
+                downArrow.classList.add('active');
+                dirBtn.title = '내림차순 (최신/높은 점수 먼저)';
             } else {
-                // Up arrow (↑ Ascending)
-                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>';
-                btn.title = '오름차순 (과거/낮은 점수 먼저)';
+                upArrow.classList.add('active');
+                downArrow.classList.remove('active');
+                dirBtn.title = '오름차순 (과거/낮은 점수 먼저)';
             }
         }
         
-        function changeSortCriteria() {
-            const select = document.getElementById('sort-criteria');
-            sortCriteria = select.value;
+        function toggleSortDropdown(e) {
+            e.stopPropagation();
+            const dropdown = document.getElementById('sort-dropdown');
+            const chevron = document.getElementById('sort-chevron');
+            dropdown.classList.toggle('show');
+            chevron.classList.toggle('open');
+        }
+        
+        function closeSortDropdown() {
+            const dropdown = document.getElementById('sort-dropdown');
+            const chevron = document.getElementById('sort-chevron');
+            if (dropdown) dropdown.classList.remove('show');
+            if (chevron) chevron.classList.remove('open');
+        }
+        
+        function selectSortOption(item, e) {
+            e.stopPropagation();
+            sortCriteria = item.dataset.value;
+            updateSortDropdown();
+            closeSortDropdown();
             loadPapers();
         }
         
@@ -1421,7 +1548,8 @@
             loadPapers();
         }
         
-        function toggleSortOrder() {
+        function toggleSortOrder(e) {
+            if (e) e.stopPropagation();
             sortOrder = sortOrder === 'desc' ? 'asc' : 'desc';
             updateSortOrderIcon();
             // Set flag to scroll to selected card after list reloads
@@ -1852,6 +1980,14 @@
             document.getElementById('date-picker-popup').classList.add('hidden');
             loadPapers();
         }
+        
+        // Close sort dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('sort-wrapper');
+            if (wrapper && !wrapper.contains(e.target)) {
+                closeSortDropdown();
+            }
+        });
         
         // Close date picker when clicking outside
         document.addEventListener('click', function(e) {
