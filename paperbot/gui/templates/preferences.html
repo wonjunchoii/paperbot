@@ -1,0 +1,943 @@
+<!-- Preferences Modal Overlay (loaded via fetch into #pref-overlay) -->
+<style>
+    /* ==========================================================
+       다크모드 기본값 — sample.html 과 완전 동일
+       ========================================================== */
+    #pref-overlay {
+        /* 기본 8색 (sample.html 원본) */
+        --paper-bg: #1e222d;
+        --paper-side: #16191e;
+        --paper-accent: #3d7eff;
+        --paper-border: #2d333d;
+        --paper-text: #e1e1e1;
+        --paper-dim: #848d9a;
+        --paper-input: #11141a;
+        --paper-card: #252a37;
+        /* 파생 토큰 (하드코딩 제거용) */
+        --paper-text-strong: #ffffff;
+        --paper-hover: rgba(255,255,255,0.06);
+        --paper-hover-strong: rgba(255,255,255,0.08);
+        --paper-accent-bg: rgba(61,126,255,0.1);
+        --paper-accent-bg-subtle: rgba(61,126,255,0.08);
+        --paper-accent-bg-faint: rgba(61,126,255,0.05);
+        --paper-accent-bg-medium: rgba(61,126,255,0.12);
+        --paper-btn-path-bg: #343b47;
+        --paper-btn-path-hover: #3d4654;
+        --paper-favicon-bg: rgba(255,255,255,0.05);
+        --paper-success: #4ade80;
+        --paper-overlay-bg: rgba(0,0,0,0.55);
+        --paper-window-shadow: 0 40px 100px rgba(0,0,0,0.6);
+        --paper-modal-shadow: 0 24px 48px rgba(0,0,0,0.4);
+        --paper-dropdown-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        --paper-focus-ring: 0 0 0 2px rgba(61,126,255,0.2);
+        --paper-active-shadow: 0 0 0 2px rgba(61,126,255,0.25);
+        --paper-card-hover-shadow: 0 0 0 1px rgba(255,255,255,0.06);
+
+        position: fixed; inset: 0;
+        background: var(--paper-overlay-bg);
+        z-index: 9000;
+        display: flex; align-items: center; justify-content: center;
+        opacity: 0;
+        transition: opacity 0.25s ease;
+        padding: 24px; box-sizing: border-box;
+        font-family: 'Segoe UI', sans-serif;
+        color: var(--paper-text);
+    }
+
+    /* ==========================================================
+       라이트모드 분기
+       ========================================================== */
+    @media (prefers-color-scheme: light) {
+        #pref-overlay {
+            --paper-bg: #ffffff;
+            --paper-side: #f8fafc;
+            --paper-accent: #2563eb;
+            --paper-border: #e2e8f0;
+            --paper-text: #334155;
+            --paper-dim: #64748b;
+            --paper-input: #f1f5f9;
+            --paper-card: #f8fafc;
+            --paper-text-strong: #0f172a;
+            --paper-hover: rgba(0,0,0,0.04);
+            --paper-hover-strong: rgba(0,0,0,0.06);
+            --paper-accent-bg: rgba(37,99,235,0.08);
+            --paper-accent-bg-subtle: rgba(37,99,235,0.06);
+            --paper-accent-bg-faint: rgba(37,99,235,0.04);
+            --paper-accent-bg-medium: rgba(37,99,235,0.1);
+            --paper-btn-path-bg: #e2e8f0;
+            --paper-btn-path-hover: #cbd5e1;
+            --paper-favicon-bg: rgba(0,0,0,0.04);
+            --paper-success: #16a34a;
+            --paper-overlay-bg: rgba(0,0,0,0.35);
+            --paper-window-shadow: 0 40px 100px rgba(0,0,0,0.15);
+            --paper-modal-shadow: 0 24px 48px rgba(0,0,0,0.12);
+            --paper-dropdown-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            --paper-focus-ring: 0 0 0 2px rgba(37,99,235,0.2);
+            --paper-active-shadow: 0 0 0 2px rgba(37,99,235,0.25);
+            --paper-card-hover-shadow: 0 0 0 1px rgba(0,0,0,0.06);
+        }
+    }
+
+    #pref-overlay.is-open { opacity: 1; }
+
+    /* 창 */
+    .pref-window {
+        width: 920px; max-width: 100%; height: 680px; max-height: calc(100vh - 48px);
+        background: var(--paper-bg);
+        border: 1px solid var(--paper-border);
+        border-radius: 12px;
+        display: flex; overflow: hidden; position: relative;
+        box-shadow: var(--paper-window-shadow);
+        transform: scale(0.96); opacity: 0;
+        transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+    #pref-overlay.is-open .pref-window { transform: scale(1); opacity: 1; }
+
+    /* 사이드바 */
+    .pref-sidebar {
+        width: 220px; background: var(--paper-side);
+        border-right: 1px solid var(--paper-border);
+        display: flex; flex-direction: column; padding: 20px 0;
+    }
+    .pref-nav {
+        padding: 15px 25px; font-size: 14px; color: var(--paper-dim);
+        cursor: pointer; transition: 0.2s; border-left: 4px solid transparent;
+    }
+    .pref-nav:hover { background: var(--paper-hover); color: var(--paper-text-strong); }
+    .pref-nav.active {
+        background: var(--paper-accent-bg);
+        color: var(--paper-accent);
+        border-left: 4px solid var(--paper-accent);
+        font-weight: bold;
+    }
+
+    /* 메인 패널 */
+    .pref-main { flex: 1; display: flex; flex-direction: column; position: relative; }
+    .pref-page {
+        display: none; padding: 35px; height: 100%; box-sizing: border-box;
+        overflow-y: auto; scrollbar-gutter: stable;
+    }
+    .pref-page.active { display: block; }
+    .pref-page::-webkit-scrollbar { width: 8px; }
+    .pref-page::-webkit-scrollbar-track { background: transparent; }
+    .pref-page::-webkit-scrollbar-thumb { background: var(--paper-border); border-radius: 4px; }
+    .pref-page::-webkit-scrollbar-thumb:hover { background: var(--paper-dim); }
+    .pref-page { scrollbar-width: thin; scrollbar-color: var(--paper-border) transparent; }
+
+    .pref-page h2 { margin: 0 0 25px 0; font-size: 20px; color: var(--paper-text-strong); }
+
+    /* 폼 필드 */
+    .pref-field { margin-bottom: 20px; }
+    .pref-field label {
+        display: block; font-size: 12px; color: var(--paper-dim);
+        margin-bottom: 8px; text-transform: uppercase;
+    }
+    .pref-label-opt { font-weight: normal; opacity: 0.85; }
+
+    .pref-input, .pref-select, .pref-textarea {
+        width: 100%; background: var(--paper-input);
+        border: 1px solid var(--paper-border); border-radius: 6px;
+        padding: 12px; color: var(--paper-text-strong); font-size: 14px;
+        box-sizing: border-box; outline: none; transition: 0.2s;
+        font-family: inherit;
+    }
+    .pref-input:focus, .pref-select:focus, .pref-textarea:focus {
+        border-color: var(--paper-accent);
+        box-shadow: var(--paper-focus-ring);
+    }
+    .pref-input::placeholder { color: var(--paper-dim); opacity: 0.85; }
+    .pref-textarea { height: 180px; font-family: 'Consolas', monospace; resize: none; line-height: 1.5; }
+
+    /* 비밀번호 peek */
+    .pref-peek-wrap { position: relative; }
+    .pref-peek-wrap .pref-input { padding-right: 44px; }
+    .pref-peek-btn {
+        position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+        width: 28px; height: 28px; padding: 0; border: none; background: transparent;
+        color: var(--paper-dim); cursor: pointer; border-radius: 4px;
+        display: flex; align-items: center; justify-content: center;
+        transition: color 0.15s, background 0.15s;
+    }
+    .pref-peek-btn:hover { color: var(--paper-text); background: var(--paper-hover); }
+    .pref-peek-btn svg { width: 18px; height: 18px; }
+    .pref-peek-btn .icon-hide { display: none; }
+    .pref-peek-btn .icon-show { display: block; }
+    .pref-peek-wrap.is-visible .pref-peek-btn .icon-hide { display: block; }
+    .pref-peek-wrap.is-visible .pref-peek-btn .icon-show { display: none; }
+
+    /* 이메일 필드 */
+    .pref-email-label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .pref-email-label-row label { margin-bottom: 0; }
+    .pref-email-success { display: none; align-items: center; gap: 6px; font-size: 12px; color: var(--paper-success); }
+    .pref-email-success svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .pref-email-wrap.confirmed .pref-email-success { display: inline-flex; }
+    .pref-email-wrap.confirmed.fade-out .pref-email-success { opacity: 0; transition: opacity 3s ease; }
+    .pref-email-success.hidden-done { display: none !important; }
+    .pref-email-confirm { position: relative; }
+    .pref-email-confirm .pref-input { width: 100%; padding-right: 44px; box-sizing: border-box; }
+    .pref-email-wrap.confirmed .pref-email-confirm .pref-input { padding-right: 76px; }
+    .pref-email-enter {
+        position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+        width: 28px; height: 28px; padding: 0; border: none; background: none;
+        color: var(--paper-dim); cursor: pointer; display: flex;
+        align-items: center; justify-content: center; border-radius: 4px;
+        transition: color 0.2s, background 0.2s;
+    }
+    .pref-email-enter:hover { color: var(--paper-accent); background: var(--paper-hover); }
+    .pref-email-enter svg { width: 18px; height: 18px; }
+    .pref-email-wrap.confirmed .pref-email-enter { display: none; }
+    .pref-confirmed-icons { display: none; position: absolute; right: 6px; top: 50%; transform: translateY(-50%); align-items: center; gap: 2px; }
+    .pref-email-wrap.confirmed .pref-confirmed-icons { display: flex; }
+    .pref-icon-edit, .pref-icon-reset {
+        width: 28px; height: 28px; padding: 0; border: none; background: none;
+        color: var(--paper-dim); cursor: pointer; display: flex;
+        align-items: center; justify-content: center; border-radius: 4px;
+        font-size: 16px; transition: color 0.2s, background 0.2s;
+    }
+    .pref-icon-edit:hover { color: var(--paper-accent); background: var(--paper-hover); }
+    .pref-icon-reset:hover { color: #e05c5c; background: rgba(224,92,92,0.1); }
+    .pref-email-wrap.confirmed .pref-email-confirm .pref-input {
+        background: var(--paper-card); color: var(--paper-text);
+        border-color: rgba(74, 222, 128, 0.5); box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.2);
+    }
+    .pref-email-wrap.confirmed.fade-out .pref-email-confirm .pref-input {
+        border-color: var(--paper-border); box-shadow: none;
+        transition: border-color 3s ease, box-shadow 3s ease;
+    }
+    .pref-email-wrap.confirmed.border-done .pref-email-confirm .pref-input {
+        border-color: var(--paper-border); box-shadow: none;
+    }
+
+    /* Path box */
+    .pref-path-box { display: flex; gap: 8px; }
+    .pref-btn-path {
+        background: var(--paper-btn-path-bg); border: none; color: var(--paper-text-strong);
+        padding: 0 15px; border-radius: 4px;
+        cursor: pointer; transition: background 0.2s, color 0.2s; white-space: nowrap;
+    }
+    .pref-btn-path:hover { background: var(--paper-btn-path-hover); color: var(--paper-text-strong); }
+
+    /* 하단 액션 바 */
+    .pref-action-bar {
+        position: absolute; bottom: 0; left: 0; right: 0;
+        padding: 20px 35px; background: var(--paper-bg);
+        border-top: 1px solid var(--paper-border);
+        display: flex; justify-content: flex-end; gap: 12px;
+    }
+    .pref-btn-save {
+        background: var(--paper-accent); border: none; color: #fff; padding: 12px 28px;
+        border-radius: 6px; font-weight: 600; cursor: pointer; transition: filter 0.2s, background 0.2s;
+    }
+    .pref-btn-save:hover { filter: brightness(1.1); }
+    .pref-btn-cancel {
+        background: transparent; border: 1px solid var(--paper-border); color: var(--paper-dim);
+        padding: 12px 20px; border-radius: 6px; cursor: pointer;
+        transition: border-color 0.2s, color 0.2s;
+    }
+    .pref-btn-cancel:hover { border-color: var(--paper-dim); color: var(--paper-text); }
+
+    /* 닫기(✕) 버튼 */
+    .pref-close {
+        position: absolute; top: 20px; right: 20px; color: var(--paper-dim);
+        cursor: pointer; z-index: 10; transition: color 0.2s, background 0.2s;
+        padding: 6px; border-radius: 6px; background: none; border: none;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .pref-close:hover { color: var(--paper-text-strong); background: var(--paper-hover); }
+
+    /* 저널 페이지 */
+    .pref-journal-header { display: flex; align-items: center; gap: 0; margin-bottom: 20px; flex-shrink: 0; }
+    .pref-journal-title-row { display: inline-flex; align-items: center; gap: 10px; }
+    .pref-journal-header h2 { margin: 0; }
+    .pref-btn-add-journal {
+        width: 28px; height: 28px; padding: 0;
+        border: 1px solid var(--paper-border); background: var(--paper-card);
+        color: var(--paper-accent); border-radius: 8px;
+        font-size: 16px; line-height: 1; font-weight: 300; cursor: pointer;
+        display: inline-flex; align-items: center; justify-content: center;
+        transition: 0.2s; flex-shrink: 0;
+    }
+    .pref-btn-add-journal:hover { background: var(--paper-accent-bg-medium); border-color: var(--paper-accent); }
+
+    /* 저널 카드 */
+    .pref-journal-list { display: flex; flex-direction: column; gap: 12px; }
+    .pref-journal-card {
+        background: var(--paper-card); border: 1px solid var(--paper-border);
+        border-radius: 8px; padding: 14px 18px;
+        display: flex; justify-content: space-between; align-items: center; gap: 14px;
+        transition: 0.2s;
+    }
+    .pref-journal-card:hover { border-color: var(--paper-accent); transform: translateY(-2px); }
+    .pref-journal-card-main { display: flex; align-items: center; gap: 14px; min-width: 0; }
+    .pref-journal-favicon { width: 24px; height: 24px; border-radius: 6px; object-fit: contain; flex-shrink: 0; background: var(--paper-favicon-bg); }
+    .pref-journal-info { min-width: 0; }
+    .pref-journal-info .name { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+    .pref-journal-info .meta { font-size: 12px; color: var(--paper-dim); }
+    .pref-journal-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity 0.2s; }
+    .pref-journal-card:hover .pref-journal-actions { opacity: 1; }
+    .pref-jcard-edit, .pref-jcard-del {
+        width: 28px; height: 28px; padding: 0; border-radius: 6px; cursor: pointer;
+        border: none; background: transparent; color: var(--paper-dim);
+        font-size: 14px; line-height: 1; display: flex; align-items: center; justify-content: center;
+        transition: color 0.2s, background 0.2s;
+    }
+    .pref-jcard-edit:hover { color: var(--paper-accent); background: var(--paper-accent-bg-medium); }
+    .pref-jcard-del:hover { color: #e05c5c; background: rgba(224,92,92,0.12); }
+
+    /* LLM 프로필 카드 */
+    .pref-cred-list { display: flex; flex-direction: column; gap: 10px; }
+    .pref-cred-card {
+        background: var(--paper-card); border: 1px solid var(--paper-border);
+        border-radius: 8px; padding: 14px 18px;
+        display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        cursor: pointer;
+    }
+    .pref-cred-card:hover { border-color: var(--paper-dim); box-shadow: var(--paper-card-hover-shadow); }
+    .pref-cred-card.active { border-color: var(--paper-accent); background: var(--paper-accent-bg-subtle); box-shadow: var(--paper-active-shadow); }
+    .pref-cred-card.active:hover { border-color: var(--paper-accent); }
+    .pref-cred-card .label { font-weight: 600; font-size: 13px; min-width: 120px; }
+    .pref-cred-card .model { font-size: 12px; color: var(--paper-dim); }
+    .pref-cred-card .key-mask { font-size: 11px; color: var(--paper-dim); font-family: monospace; }
+    .pref-cred-card .cred-right { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .pref-cred-card .badge { font-size: 10px; padding: 3px 8px; border-radius: 10px; background: var(--paper-accent); color: #fff; font-weight: 600; }
+    .pref-cred-card .menu-wrap { position: relative; }
+    .pref-cred-card .menu-trigger {
+        width: 32px; height: 32px; padding: 0; border: none; background: transparent;
+        color: var(--paper-dim); border-radius: 6px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px; line-height: 1; transition: color 0.2s, background 0.2s;
+    }
+    .pref-cred-card .menu-trigger:hover { color: var(--paper-text); background: var(--paper-hover-strong); }
+    .pref-cred-card .cred-dropdown {
+        display: none; position: absolute; right: 0; top: 100%; margin-top: 4px;
+        min-width: 120px; background: var(--paper-card); border: 1px solid var(--paper-border);
+        border-radius: 8px; box-shadow: var(--paper-dropdown-shadow); padding: 4px 0; z-index: 20;
+    }
+    .pref-cred-card .menu-wrap.is-open .cred-dropdown { display: block; }
+    .pref-cred-card .cred-dropdown button {
+        display: block; width: 100%; padding: 10px 14px; border: none; background: none;
+        color: var(--paper-text); font-size: 13px; text-align: left; cursor: pointer;
+        transition: background 0.15s;
+    }
+    .pref-cred-card .cred-dropdown button:hover { background: var(--paper-hover); }
+    .pref-cred-card .cred-dropdown button.cred-menu-del { color: #e05c5c; }
+    .pref-btn-add-cred {
+        width: 100%; padding: 12px; border: 1px dashed var(--paper-border);
+        background: transparent; color: var(--paper-dim); border-radius: 8px;
+        cursor: pointer; margin-top: 12px; transition: 0.2s; font-size: 13px;
+    }
+    .pref-btn-add-cred:hover { background: var(--paper-accent-bg-faint); color: var(--paper-accent); border-color: var(--paper-accent); }
+
+    /* 서브 모달 (LLM / 저널 추가·수정) */
+    .pref-modal-overlay {
+        position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9100;
+        display: none; align-items: center; justify-content: center;
+        padding: 24px; box-sizing: border-box;
+        opacity: 0; transition: opacity 0.2s ease;
+    }
+    .pref-modal-overlay.is-open { display: flex; opacity: 1; }
+    .pref-modal-overlay.is-open .pref-modal-box { transform: scale(1); opacity: 1; }
+    .pref-modal-box {
+        width: 100%; max-width: 420px; max-height: calc(100vh - 48px); overflow: hidden;
+        background: var(--paper-bg); border: 1px solid var(--paper-border); border-radius: 12px;
+        box-shadow: var(--paper-modal-shadow);
+        display: flex; flex-direction: column;
+        transform: scale(0.97); opacity: 0; transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .pref-modal-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 18px 20px; border-bottom: 1px solid var(--paper-border);
+    }
+    .pref-modal-title { font-size: 16px; font-weight: 600; color: var(--paper-text-strong); margin: 0; }
+    .pref-modal-close {
+        width: 32px; height: 32px; border: none; background: transparent;
+        color: var(--paper-dim); cursor: pointer; border-radius: 6px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px; line-height: 1; transition: color 0.15s, background 0.15s;
+    }
+    .pref-modal-close:hover { color: var(--paper-text-strong); background: var(--paper-hover-strong); }
+    .pref-modal-body { padding: 20px; overflow-y: auto; flex: 1; min-height: 0; }
+    .pref-modal-footer {
+        padding: 16px 20px; border-top: 1px solid var(--paper-border);
+        display: flex; justify-content: flex-end; gap: 10px;
+    }
+    .pref-modal-form { display: none; }
+    .pref-modal-form.is-visible { display: block; }
+
+    /* 인풋 그룹 (검증) */
+    .pref-input-group { margin-bottom: 20px; }
+    .pref-input-group label {
+        display: block; font-size: 11px; color: var(--paper-dim);
+        margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;
+    }
+    .pref-input-group .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .pref-input-group .label-row label { margin-bottom: 0; }
+    .pref-input-group .error-msg { display: none; font-size: 11px; color: #b85450; }
+    .pref-input-group.is-invalid .error-msg { display: inline; }
+    .pref-input-group.is-invalid.fade-out .error-msg { opacity: 0; transition: opacity 3s ease; }
+    .pref-input-group.is-invalid .pref-input,
+    .pref-input-group.is-invalid .pref-peek-wrap .pref-input {
+        border-color: #b85450; box-shadow: 0 0 0 1px #b85450;
+        animation: pref-field-shake 0.45s ease;
+    }
+    .pref-input-group.is-invalid.fade-out .pref-input,
+    .pref-input-group.is-invalid.fade-out .pref-peek-wrap .pref-input {
+        border-color: var(--paper-border); box-shadow: none;
+        transition: border-color 3s ease, box-shadow 3s ease;
+    }
+    @keyframes pref-field-shake {
+        0%, 100% { transform: translateX(0); }
+        20% { transform: translateX(-5px); }
+        40% { transform: translateX(5px); }
+        60% { transform: translateX(-3px); }
+        80% { transform: translateX(3px); }
+    }
+</style>
+
+<!-- 메인 Preferences 창 -->
+<div class="pref-window" onclick="event.stopPropagation()">
+    <div class="pref-close" onclick="toggleModal(false)" title="닫기">✕</div>
+
+    <!-- 사이드바 -->
+    <div class="pref-sidebar">
+        <div style="padding: 0 25px 20px; font-size: 11px; color: var(--paper-accent); font-weight: 800;">SYSTEM PREFERENCES</div>
+        <div class="pref-nav active" onclick="prefShowPage('pref-env', this)">Authentication (.env)</div>
+        <div class="pref-nav" onclick="prefShowPage('pref-yaml', this)">Journal List (YAML)</div>
+        <div class="pref-nav" onclick="prefShowPage('pref-path', this)">Storage Paths</div>
+    </div>
+
+    <!-- 메인 패널 -->
+    <div class="pref-main">
+        <!-- ① Credentials 페이지 -->
+        <div id="pref-env" class="pref-page active">
+            <h2>Credentials</h2>
+
+            <!-- 이메일 -->
+            <div class="pref-field pref-email-wrap" id="pref-email-wrap">
+                <div class="pref-email-label-row">
+                    <label>User Email <span class="pref-label-opt">(선택)</span></label>
+                    <div class="pref-email-success" id="pref-email-success">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+                        <span>입력 완료!</span>
+                    </div>
+                </div>
+                <div class="pref-email-confirm" id="pref-email-confirm">
+                    <input type="email" class="pref-input" id="pref-user-email" placeholder="user@paperbot.com" autocomplete="email">
+                    <button type="button" class="pref-email-enter" onclick="prefConfirmEmail()" aria-label="확정">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 10L4 15l5 5"/><path d="M4 15h11a4 4 0 0 0 4-4V4"/></svg>
+                    </button>
+                    <div class="pref-confirmed-icons">
+                        <button type="button" class="pref-icon-edit" onclick="prefEditEmail()" aria-label="수정">&#9998;</button>
+                        <button type="button" class="pref-icon-reset" onclick="prefResetEmail()" aria-label="초기화">&#128465;</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LLM 프로필 -->
+            <div class="pref-field">
+                <label>LLM 프로필 <span class="pref-label-opt">(선택)</span></label>
+                <div id="pref-cred-list" class="pref-cred-list"></div>
+                <button class="pref-btn-add-cred" type="button" onclick="prefOpenCredModal()">+ 새 LLM 프로필 추가</button>
+            </div>
+        </div>
+
+        <!-- ② Journal Management 페이지 -->
+        <div id="pref-yaml" class="pref-page">
+            <div class="pref-journal-header">
+                <div class="pref-journal-title-row">
+                    <h2>Journal Management</h2>
+                    <button type="button" class="pref-btn-add-journal" onclick="prefOpenJournalModal()" aria-label="저널 추가하기" title="저널 추가하기">+</button>
+                </div>
+            </div>
+            <div id="pref-journal-list" class="pref-journal-list"></div>
+        </div>
+
+        <!-- ③ Storage Paths 페이지 -->
+        <div id="pref-path" class="pref-page">
+            <h2>Storage &amp; Database</h2>
+            <div class="pref-field">
+                <label>SQLite Database Path</label>
+                <div class="pref-path-box">
+                    <input type="text" class="pref-input" value="./database/paperbot.db" readonly>
+                    <button class="pref-btn-path">Browse</button>
+                </div>
+            </div>
+            <div class="pref-field">
+                <label>Export Extraction Path</label>
+                <div class="pref-path-box">
+                    <input type="text" class="pref-input" value="./downloads/papers" readonly>
+                    <button class="pref-btn-path">Browse</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 버튼 -->
+        <div class="pref-action-bar">
+            <button class="pref-btn-cancel" onclick="toggleModal(false)">Discard</button>
+            <button class="pref-btn-save" onclick="prefSaveSettings()">Save Settings</button>
+        </div>
+    </div>
+</div>
+
+<!-- 공통 모달: LLM 프로필 / 저널 추가·수정 -->
+<div id="pref-modal-overlay" class="pref-modal-overlay" onclick="if(event.target===this) prefCloseSubModal()">
+    <div class="pref-modal-box" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+        <div class="pref-modal-header">
+            <h3 class="pref-modal-title" id="pref-modal-title">제목</h3>
+            <button type="button" class="pref-modal-close" onclick="prefCloseSubModal()" aria-label="닫기">×</button>
+        </div>
+        <div class="pref-modal-body">
+            <!-- LLM 프로필 폼 -->
+            <div id="pref-cred-form" class="pref-modal-form">
+                <div class="pref-input-group" id="pref-cred-name-group">
+                    <div class="label-row">
+                        <label>프로필 이름 (구분용)</label>
+                        <span class="error-msg">*필수 입력칸입니다.</span>
+                    </div>
+                    <input type="text" class="pref-input" id="pref-cred-name" placeholder="예: OpenAI 작업용">
+                </div>
+                <div class="pref-input-group">
+                    <label>LLM 모델</label>
+                    <select class="pref-select" id="pref-cred-model">
+                        <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                        <option value="gpt-4o-mini">GPT-4o mini (OpenAI)</option>
+                        <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (Anthropic)</option>
+                        <option value="claude-3-opus">Claude 3 Opus (Anthropic)</option>
+                    </select>
+                </div>
+                <div class="pref-input-group" id="pref-cred-key-group">
+                    <div class="label-row">
+                        <label>API Key</label>
+                        <span class="error-msg">*필수 입력칸입니다.</span>
+                    </div>
+                    <div class="pref-peek-wrap" id="pref-cred-key-wrap">
+                        <input type="password" class="pref-input" id="pref-cred-key" placeholder="sk-... 또는 API 키" autocomplete="off">
+                        <button type="button" class="pref-peek-btn" onclick="prefTogglePeek('pref-cred-key-wrap')" aria-label="비밀번호 보기">
+                            <svg class="icon-show" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="icon-hide" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <!-- 저널 폼 -->
+            <div id="pref-journal-form" class="pref-modal-form">
+                <div class="pref-input-group" id="pref-journal-name-group">
+                    <div class="label-row">
+                        <label>저널 이름</label>
+                        <span class="error-msg">*필수 입력칸입니다.</span>
+                    </div>
+                    <input type="text" class="pref-input" id="pref-journal-name" placeholder="예: Nature Materials">
+                </div>
+                <div class="pref-input-group">
+                    <label>ISSN <span class="pref-label-opt">(선택)</span></label>
+                    <input type="text" class="pref-input" id="pref-journal-issn" placeholder="0000-0000">
+                </div>
+                <div class="pref-input-group" id="pref-journal-rss-group">
+                    <div class="label-row">
+                        <label>RSS Feed URL</label>
+                        <span class="error-msg">*필수 입력칸입니다.</span>
+                    </div>
+                    <input type="text" class="pref-input" id="pref-journal-rss" placeholder="https://...">
+                </div>
+            </div>
+        </div>
+        <div class="pref-modal-footer">
+            <button type="button" class="pref-btn-cancel" onclick="prefCloseSubModal()">취소</button>
+            <button type="button" class="pref-btn-save" id="pref-modal-primary-btn" onclick="prefSubmitSubModal()">저장</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    'use strict';
+
+    // ============================================================
+    // 데이터 (데모)
+    // ============================================================
+    var credentials = [
+        { id: '1', name: 'OpenAI 기본', model: 'gpt-4o', modelLabel: 'GPT-4o (OpenAI)', key: 'sk-your-openai-key' },
+        { id: '2', name: 'Claude 백업', model: 'claude-3-5-sonnet', modelLabel: 'Claude 3.5 Sonnet (Anthropic)', key: 'sk-ant-...' }
+    ];
+    var activeCredId = '1';
+
+    var journals = [
+        { id: 'j1', name: 'Nature Materials', issn: '1476-4660', rss: 'https://www.nature.com/nmaterials.rss' },
+        { id: 'j2', name: 'npj Computational Materials', issn: '2057-3960', rss: 'https://www.nature.com/npjcompumats.rss' },
+        { id: 'j3', name: 'Nature Communications', issn: '2041-1723', rss: 'https://www.nature.com/ncomms.rss' }
+    ];
+
+    var modalMode = null;
+    var modalEditId = null;
+    var emailConfirmed = false;
+
+    // ============================================================
+    // 유틸
+    // ============================================================
+    if (!String.prototype.escapeHtml) {
+        String.prototype.escapeHtml = function() {
+            var d = document.createElement('div');
+            d.textContent = this;
+            return d.innerHTML;
+        };
+    }
+    function esc(s) { return (s || '').escapeHtml(); }
+    function maskKey(key) {
+        if (!key || key.length < 8) return '••••••••';
+        return key.slice(0, 4) + '••••••••' + key.slice(-4);
+    }
+    function getFaviconUrl(rss) {
+        if (!rss) return '';
+        try {
+            var u = new URL(rss);
+            var domain = u.hostname.replace(/^www\./, '');
+            return 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) + '&sz=32';
+        } catch (e) { return ''; }
+    }
+
+    // ============================================================
+    // 페이지 네비게이션
+    // ============================================================
+    window.prefShowPage = function(pageId, navEl) {
+        document.querySelectorAll('#pref-overlay .pref-page').forEach(function(p) { p.classList.remove('active'); });
+        document.getElementById(pageId).classList.add('active');
+        document.querySelectorAll('#pref-overlay .pref-nav').forEach(function(n) { n.classList.remove('active'); });
+        navEl.classList.add('active');
+    };
+
+    // ============================================================
+    // 이메일
+    // ============================================================
+    window.prefConfirmEmail = function() {
+        var wrap = document.getElementById('pref-email-wrap');
+        var input = document.getElementById('pref-user-email');
+        var success = document.getElementById('pref-email-success');
+        if (!wrap || !input) return;
+        if (success) success.classList.remove('hidden-done');
+        emailConfirmed = true;
+        wrap.classList.add('confirmed');
+        wrap.classList.remove('fade-out');
+        input.readOnly = true;
+        setTimeout(function() {
+            wrap.classList.add('fade-out');
+            setTimeout(function() {
+                wrap.classList.remove('fade-out');
+                wrap.classList.add('border-done');
+                if (success) success.classList.add('hidden-done');
+            }, 3000);
+        }, 1000);
+    };
+    window.prefEditEmail = function() {
+        var wrap = document.getElementById('pref-email-wrap');
+        var input = document.getElementById('pref-user-email');
+        var success = document.getElementById('pref-email-success');
+        if (!wrap || !input) return;
+        emailConfirmed = false;
+        wrap.classList.remove('confirmed', 'fade-out', 'border-done');
+        if (success) success.classList.remove('hidden-done');
+        input.readOnly = false;
+    };
+    window.prefResetEmail = function() {
+        var wrap = document.getElementById('pref-email-wrap');
+        var input = document.getElementById('pref-user-email');
+        var success = document.getElementById('pref-email-success');
+        if (!wrap || !input) return;
+        emailConfirmed = false;
+        wrap.classList.remove('confirmed', 'fade-out', 'border-done');
+        if (success) success.classList.add('hidden-done');
+        input.readOnly = false;
+        input.value = '';
+    };
+
+    var emailInput = document.getElementById('pref-user-email');
+    if (emailInput) {
+        emailInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); prefConfirmEmail(); }
+        });
+    }
+
+    // ============================================================
+    // LLM 프로필 렌더링
+    // ============================================================
+    function renderCredList() {
+        var list = document.getElementById('pref-cred-list');
+        if (!list) return;
+        var idAttr = function(id) { return (id + '').replace(/"/g, '&quot;'); };
+        list.innerHTML = credentials.map(function(c) {
+            var isActive = c.id === activeCredId;
+            return '<div class="pref-cred-card ' + (isActive ? 'active' : '') + '" data-id="' + c.id + '">' +
+                '<span class="label">' + (c.name || c.modelLabel).escapeHtml() + '</span>' +
+                '<span class="model">' + c.modelLabel + '</span>' +
+                '<span class="key-mask">' + maskKey(c.key) + '</span>' +
+                '<div class="cred-right">' +
+                    (isActive ? '<span class="badge">사용 중</span>' : '') +
+                    '<div class="menu-wrap">' +
+                        '<button type="button" class="menu-trigger" aria-label="메뉴">⋮</button>' +
+                        '<div class="cred-dropdown">' +
+                            '<button type="button" data-action="edit" data-cred-id="' + idAttr(c.id) + '">수정</button>' +
+                            '<button type="button" class="cred-menu-del" data-action="delete" data-cred-id="' + idAttr(c.id) + '">삭제</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    document.getElementById('pref-cred-list').addEventListener('click', function(e) {
+        e.stopPropagation();
+        var trigger = e.target.closest('.menu-trigger');
+        var menuBtn = e.target.closest('.cred-dropdown button');
+        var insideMenu = e.target.closest('.menu-wrap');
+        if (trigger) {
+            var wrap = trigger.closest('.menu-wrap');
+            document.querySelectorAll('#pref-cred-list .menu-wrap.is-open').forEach(function(w) {
+                if (w !== wrap) w.classList.remove('is-open');
+            });
+            wrap.classList.toggle('is-open');
+            return;
+        }
+        if (menuBtn && menuBtn.dataset.credId) {
+            var action = menuBtn.dataset.action;
+            var id = menuBtn.dataset.credId;
+            menuBtn.closest('.menu-wrap').classList.remove('is-open');
+            if (action === 'edit') prefOpenCredModal(id);
+            else if (action === 'delete') prefDeleteCred(id);
+            return;
+        }
+        if (!insideMenu) {
+            var card = e.target.closest('.pref-cred-card');
+            if (card && card.dataset.id) {
+                activeCredId = card.dataset.id;
+                renderCredList();
+            }
+        }
+    });
+
+    document.addEventListener('click', function() {
+        document.querySelectorAll('#pref-cred-list .menu-wrap.is-open').forEach(function(w) { w.classList.remove('is-open'); });
+    });
+
+    function prefDeleteCred(id) {
+        if (!confirm('이 프로필을 삭제할까요?')) return;
+        credentials = credentials.filter(function(x) { return x.id !== id; });
+        if (activeCredId === id) activeCredId = credentials[0] ? credentials[0].id : null;
+        renderCredList();
+    }
+
+    // ============================================================
+    // 저널 렌더링
+    // ============================================================
+    function renderJournalList() {
+        var list = document.getElementById('pref-journal-list');
+        if (!list) return;
+        list.innerHTML = journals.map(function(j) {
+            var favicon = getFaviconUrl(j.rss);
+            return '<div class="pref-journal-card" data-id="' + j.id + '">' +
+                '<div class="pref-journal-card-main">' +
+                    (favicon ? '<img class="pref-journal-favicon" src="' + favicon + '" alt="" loading="lazy">' : '') +
+                    '<div class="pref-journal-info">' +
+                        '<div class="name">' + j.name.escapeHtml() + '</div>' +
+                        (j.issn ? '<div class="meta">ISSN: ' + j.issn.escapeHtml() + '</div>' : '') +
+                    '</div>' +
+                '</div>' +
+                '<div class="pref-journal-actions">' +
+                    '<button type="button" class="pref-jcard-edit" onclick="prefOpenJournalModal(\'' + j.id + '\')" aria-label="수정">&#9998;</button>' +
+                    '<button type="button" class="pref-jcard-del" onclick="prefDeleteJournal(\'' + j.id + '\')" aria-label="삭제">&#128465;</button>' +
+                '</div>' +
+            '</div>';
+        }).join('');
+    }
+
+    window.prefDeleteJournal = function(id) {
+        if (!confirm('이 저널을 삭제할까요?')) return;
+        journals = journals.filter(function(x) { return x.id !== id; });
+        renderJournalList();
+    };
+
+    // ============================================================
+    // 서브 모달
+    // ============================================================
+    function clearInvalid() {
+        document.querySelectorAll('#pref-modal-overlay .pref-input-group.is-invalid').forEach(function(g) {
+            g.classList.remove('is-invalid', 'fade-out');
+        });
+    }
+    function showFieldErrors(ids) {
+        clearInvalid();
+        ids.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.classList.add('is-invalid');
+        });
+        setTimeout(function() {
+            ids.forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.classList.add('fade-out');
+            });
+            setTimeout(function() {
+                ids.forEach(function(id) {
+                    var el = document.getElementById(id);
+                    if (el) el.classList.remove('is-invalid', 'fade-out');
+                });
+            }, 3000);
+        }, 1000);
+    }
+
+    window.prefOpenCredModal = function(editId) {
+        modalMode = 'cred';
+        modalEditId = editId || null;
+        clearInvalid();
+        document.getElementById('pref-modal-title').textContent = modalEditId ? '프로필 수정' : '새 LLM 프로필';
+        document.getElementById('pref-cred-form').classList.add('is-visible');
+        document.getElementById('pref-journal-form').classList.remove('is-visible');
+        document.getElementById('pref-modal-primary-btn').textContent = modalEditId ? '저장' : '추가';
+
+        document.getElementById('pref-cred-name').value = '';
+        document.getElementById('pref-cred-model').value = 'gpt-4o';
+        document.getElementById('pref-cred-key').value = '';
+        var keyWrap = document.getElementById('pref-cred-key-wrap');
+        if (keyWrap) { keyWrap.classList.remove('is-visible'); keyWrap.querySelector('.pref-input').type = 'password'; keyWrap.querySelector('.pref-peek-btn').setAttribute('aria-label', '비밀번호 보기'); }
+        if (modalEditId) {
+            var c = credentials.find(function(x) { return x.id === modalEditId; });
+            if (c) {
+                document.getElementById('pref-cred-name').value = c.name || '';
+                document.getElementById('pref-cred-model').value = c.model;
+                document.getElementById('pref-cred-key').value = c.key;
+            }
+        }
+        document.getElementById('pref-modal-overlay').classList.add('is-open');
+        setTimeout(function() { document.getElementById('pref-cred-name').focus(); }, 80);
+    };
+
+    window.prefOpenJournalModal = function(editId) {
+        modalMode = 'journal';
+        modalEditId = editId || null;
+        clearInvalid();
+        document.getElementById('pref-modal-title').textContent = modalEditId ? '저널 수정' : '저널 추가';
+        document.getElementById('pref-journal-form').classList.add('is-visible');
+        document.getElementById('pref-cred-form').classList.remove('is-visible');
+        document.getElementById('pref-modal-primary-btn').textContent = modalEditId ? '저장' : '추가';
+
+        document.getElementById('pref-journal-name').value = '';
+        document.getElementById('pref-journal-issn').value = '';
+        document.getElementById('pref-journal-rss').value = '';
+        if (modalEditId) {
+            var j = journals.find(function(x) { return x.id === modalEditId; });
+            if (j) {
+                document.getElementById('pref-journal-name').value = j.name || '';
+                document.getElementById('pref-journal-issn').value = j.issn || '';
+                document.getElementById('pref-journal-rss').value = j.rss || '';
+            }
+        }
+        document.getElementById('pref-modal-overlay').classList.add('is-open');
+        setTimeout(function() { document.getElementById('pref-journal-name').focus(); }, 80);
+    };
+
+    window.prefCloseSubModal = function() {
+        clearInvalid();
+        document.getElementById('pref-modal-overlay').classList.remove('is-open');
+        document.getElementById('pref-cred-form').classList.remove('is-visible');
+        document.getElementById('pref-journal-form').classList.remove('is-visible');
+        modalMode = null;
+        modalEditId = null;
+    };
+
+    window.prefSubmitSubModal = function() {
+        if (modalMode === 'cred') {
+            var name = document.getElementById('pref-cred-name').value.trim() || null;
+            var model = document.getElementById('pref-cred-model').value;
+            var modelLabel = document.getElementById('pref-cred-model').selectedOptions[0].text;
+            var key = document.getElementById('pref-cred-key').value.trim();
+            var invalid = [];
+            if (!name) invalid.push('pref-cred-name-group');
+            if (!key) invalid.push('pref-cred-key-group');
+            if (invalid.length) { showFieldErrors(invalid); return; }
+            if (modalEditId) {
+                var c = credentials.find(function(x) { return x.id === modalEditId; });
+                if (c) { c.name = name; c.model = model; c.modelLabel = modelLabel; c.key = key; }
+            } else {
+                credentials.push({
+                    id: String(Date.now()),
+                    name: name || modelLabel,
+                    model: model,
+                    modelLabel: modelLabel,
+                    key: key
+                });
+            }
+            renderCredList();
+        } else if (modalMode === 'journal') {
+            var jname = document.getElementById('pref-journal-name').value.trim();
+            var issn = document.getElementById('pref-journal-issn').value.trim();
+            var rss = document.getElementById('pref-journal-rss').value.trim();
+            var jinvalid = [];
+            if (!jname) jinvalid.push('pref-journal-name-group');
+            if (!rss) jinvalid.push('pref-journal-rss-group');
+            if (jinvalid.length) { showFieldErrors(jinvalid); return; }
+            if (modalEditId) {
+                var j = journals.find(function(x) { return x.id === modalEditId; });
+                if (j) { j.name = jname; j.issn = issn; j.rss = rss; }
+            } else {
+                journals.push({
+                    id: 'j' + Date.now(),
+                    name: jname,
+                    issn: issn || '',
+                    rss: rss || ''
+                });
+            }
+            renderJournalList();
+        }
+        prefCloseSubModal();
+    };
+
+    // ============================================================
+    // 비밀번호 peek
+    // ============================================================
+    window.prefTogglePeek = function(wrapId) {
+        var wrap = document.getElementById(wrapId);
+        if (!wrap) return;
+        var input = wrap.querySelector('.pref-input');
+        var btn = wrap.querySelector('.pref-peek-btn');
+        var isVisible = wrap.classList.toggle('is-visible');
+        input.type = isVisible ? 'text' : 'password';
+        if (btn) btn.setAttribute('aria-label', isVisible ? '비밀번호 숨기기' : '비밀번호 보기');
+    };
+
+    // ============================================================
+    // Save
+    // ============================================================
+    window.prefSaveSettings = function() {
+        // TODO: 실제 저장 로직 (API 호출 등)
+        toggleModal(false);
+    };
+
+    // ============================================================
+    // Escape 키
+    // ============================================================
+    function onEsc(e) {
+        if (e.key !== 'Escape') return;
+        var subModal = document.getElementById('pref-modal-overlay');
+        if (subModal && subModal.classList.contains('is-open')) {
+            prefCloseSubModal();
+        } else {
+            toggleModal(false);
+        }
+    }
+    document.addEventListener('keydown', onEsc);
+
+    // ============================================================
+    // 초기 렌더링
+    // ============================================================
+    renderCredList();
+    renderJournalList();
+
+    // 배경 클릭 시 닫기
+    document.getElementById('pref-overlay').addEventListener('click', function(e) {
+        if (e.target === this) toggleModal(false);
+    });
+
+    // 열림 애니메이션 트리거
+    requestAnimationFrame(function() {
+        document.getElementById('pref-overlay').classList.add('is-open');
+    });
+})();
+</script>

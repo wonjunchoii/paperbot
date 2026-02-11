@@ -31,6 +31,15 @@ async def index(request: Request):
     )
 
 
+@router.get("/preferences", response_class=HTMLResponse)
+async def preferences(request: Request):
+    """Preferences modal fragment (loaded via HTMX)."""
+    return templates.TemplateResponse(
+        "preferences.html",
+        {"request": request},
+    )
+
+
 # ============================================================================
 # Stats
 # ============================================================================

@@ -2465,6 +2465,48 @@
         });
     </script>
     
+    <!-- Preferences Overlay Container (loaded via fetch) -->
+    <div id="pref-overlay" style="display:none;"></div>
+
+    <script>
+        // ============================================
+        // Preferences Modal (toggle)
+        // ============================================
+        var _prefLoaded = false;
+
+        function toggleModal(open) {
+            var overlay = document.getElementById('pref-overlay');
+            if (open) {
+                if (_prefLoaded) {
+                    overlay.style.display = '';
+                    requestAnimationFrame(function() { overlay.classList.add('is-open'); });
+                } else {
+                    fetch('/preferences')
+                        .then(function(r) { return r.text(); })
+                        .then(function(html) {
+                            overlay.innerHTML = html;
+                            overlay.style.display = '';
+                            _prefLoaded = true;
+                            // <script> 태그 재실행
+                            overlay.querySelectorAll('script').forEach(function(old) {
+                                var s = document.createElement('script');
+                                s.textContent = old.textContent;
+                                old.parentNode.replaceChild(s, old);
+                            });
+                        });
+                }
+            } else {
+                overlay.classList.remove('is-open');
+                setTimeout(function() {
+                    overlay.style.display = 'none';
+                    // 다음 열기 시 새로 로드 (상태 초기화)
+                    overlay.innerHTML = '';
+                    _prefLoaded = false;
+                }, 260);
+            }
+        }
+    </script>
+
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container">
         <!-- Ranking progress toast slot -->
