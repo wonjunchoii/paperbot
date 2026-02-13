@@ -121,6 +121,15 @@ def _toast_success(n: int, path_str: str) -> str:
             </div>"""
 
 
+def _toast_success_simple(n: int, message: str) -> str:
+    return f"""<div class="toast toast-success toast-auto">
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>{n}개 논문이 {message}</span>
+            </div>"""
+
+
 def _toast_warning(message: str) -> str:
     return f"""<div class="toast toast-warning toast-auto">
                 <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -207,6 +216,32 @@ async def export_read(
     try:
         filepath = state.exporter.export(papers, subdir="read", format=fmt)
         return HTMLResponse(_toast_success(len(papers), str(filepath.resolve())))
+    except Exception as e:
+        return HTMLResponse(_toast_error(f"오류: {str(e)}"))
+
+
+# ============================================================================
+# Promote Picked → Read (no file export)
+# ============================================================================
+
+
+@router.post("/actions/promote-to-read", response_class=HTMLResponse)
+async def promote_to_read(request: Request):
+    """Mark all picked papers as read without exporting to file."""
+    picked_papers = state.repo.find_picked()
+    if not picked_papers:
+        return HTMLResponse(_toast_warning("선택된 논문이 없습니다."))
+
+    try:
+        paper_ids = [p.id for p in picked_papers if p.id is not None]
+        state.repo.mark_exported(paper_ids)
+        invalidate_rankings()
+
+        resp = HTMLResponse(
+            _toast_success_simple(len(picked_papers), "Read로 이동되었습니다.")
+        )
+        resp.headers["HX-Trigger"] = "statsUpdated"
+        return resp
     except Exception as e:
         return HTMLResponse(_toast_error(f"오류: {str(e)}"))
 

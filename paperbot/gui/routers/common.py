@@ -67,6 +67,7 @@ async def get_badges(request: Request):
         "new": stats.get("new", 0),
         "picked": stats.get("picked", 0),
         "read": stats.get("read", 0),
+        "archived": stats.get("archived", 0),
     })
 
 

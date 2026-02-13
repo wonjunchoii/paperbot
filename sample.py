@@ -9,21 +9,7 @@ import matplotlib.colors as mcolors
 
 # 1. 데이터베이스 로드
 conn = sqlite3.connect('papers.db')
-query = """
-SELECT id, title, abstract
-FROM papers
-"""
 
-df = pd.read_sql_query(query, conn)
-
-# 3. CSV로 저장
-df.to_csv("papers_abstract.csv", index=False, encoding="utf-8-sig")
-
-# 4. 출력해서 테이블처럼 보기
-print(df.head())
-
-conn.close()
-quit()
 df = pd.read_sql_query("SELECT title, journal FROM papers", conn)
 conn.close()
 

@@ -6,6 +6,7 @@
     <title>PaperBot - AI Research Assistant</title>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <!-- Tailwind Config: OS 다크모드 자동 감지 + 커스텀 테마 -->
     <script>
@@ -1028,11 +1029,11 @@
         /* Toast 알림 시스템 */
         .toast-container {
             position: fixed;
-            bottom: 1rem;
+            top: 4rem;          /* 헤더(h-12 = 3rem) 아래 + 여백 */
             right: 1rem;
             z-index: 1000;
             display: flex;
-            flex-direction: column-reverse;
+            flex-direction: column;
             gap: 0;
             pointer-events: none;
         }
@@ -1147,7 +1148,7 @@
                 border-color: rgba(252, 165, 165, 0.2);
             }
         }
-        /* Preferences (settings) nav item - s.html 참조 */
+        /* Preferences (settings) nav item */
         .nav-item-settings {
             display: flex;
             align-items: center;
@@ -1170,204 +1171,444 @@
         .nav-item-settings:hover svg {
             transform: rotate(90deg);
         }
+
+        /* ========================================
+           New Sidebar Styles (sample.html port)
+           ======================================== */
+        .sidebar-bg { background-color: #111827; }
+        @media (prefers-color-scheme: light) {
+            .sidebar-bg { background-color: var(--surface-elevated); }
+        }
+
+        /* Chip animation */
+        @keyframes chipIn {
+            from { opacity: 0; transform: scale(0.85) translateY(2px); }
+            to   { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        #chipContainer > div { transition: transform 0.15s ease, opacity 0.15s ease; }
+
+        /* Library nav items */
+        .lib-nav {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .lib-nav-active {
+            background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+            color: var(--accent-primary);
+            border-color: color-mix(in srgb, var(--accent-primary) 20%, transparent);
+        }
+        .lib-nav-inactive {
+            color: var(--content-secondary);
+        }
+        .lib-nav-inactive:hover {
+            background-color: var(--surface-overlay);
+        }
+
+        /* Sidebar custom scrollbar */
+        .sidebar-scroll::-webkit-scrollbar { width: 5px; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 10px; }
+
+        /* ── AI Chatbot FAB ── */
+        .ai-fab {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--accent-primary);
+            color: #ffffff;
+            box-shadow:
+                0 4px 14px color-mix(in srgb, var(--accent-primary) 45%, transparent),
+                0 0 0 0 color-mix(in srgb, var(--accent-primary) 30%, transparent);
+            transition:
+                transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.3s ease,
+                background-color 0.2s ease;
+        }
+        .ai-fab:hover {
+            transform: scale(1.08);
+            box-shadow:
+                0 6px 20px color-mix(in srgb, var(--accent-primary) 55%, transparent),
+                0 0 0 6px color-mix(in srgb, var(--accent-primary) 12%, transparent);
+        }
+        .ai-fab:active {
+            transform: scale(0.94);
+            box-shadow:
+                0 2px 8px color-mix(in srgb, var(--accent-primary) 40%, transparent),
+                0 0 0 0 transparent;
+            transition-duration: 0.1s;
+        }
+        /* Icon morph: robot ↔ xmark */
+        .ai-fab .fab-icon {
+            position: absolute;
+            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
+        }
+        .ai-fab .fab-icon-robot {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+        .ai-fab .fab-icon-close {
+            opacity: 0;
+            transform: rotate(-90deg) scale(0.5);
+        }
+        .ai-fab.is-open .fab-icon-robot {
+            opacity: 0;
+            transform: rotate(90deg) scale(0.5);
+        }
+        .ai-fab.is-open .fab-icon-close {
+            opacity: 1;
+            transform: rotate(0deg) scale(1);
+        }
+        /* Subtle idle pulse (only when closed) */
+        @keyframes fabPulse {
+            0%, 100% { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-primary) 45%, transparent), 0 0 0 0 color-mix(in srgb, var(--accent-primary) 30%, transparent); }
+            50%      { box-shadow: 0 4px 14px color-mix(in srgb, var(--accent-primary) 45%, transparent), 0 0 0 8px color-mix(in srgb, var(--accent-primary) 0%, transparent); }
+        }
+        .ai-fab:not(.is-open):not(:hover) {
+            animation: fabPulse 3s ease-in-out infinite;
+        }
+        .ai-fab.is-open, .ai-fab:hover {
+            animation: none;
+        }
+
+        /* ── AI Chatbot Popup ── */
+        .ai-popup {
+            position: fixed;
+            bottom: 96px;
+            right: 24px;
+            width: 380px;
+            height: 500px;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-base);
+            border-radius: 20px;
+            z-index: 55;
+            display: flex;
+            flex-direction: column;
+            /* Hidden by default */
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transform: translateY(16px) scale(0.96);
+            transform-origin: bottom right;
+            transition:
+                opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+                transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+                visibility 0.3s;
+            box-shadow:
+                0 25px 50px -12px rgba(0, 0, 0, 0.25),
+                0 0 0 1px color-mix(in srgb, var(--border-base) 50%, transparent);
+        }
+        .ai-popup.is-open {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
+        }
+        /* Backdrop blur effect on popup header */
+        .ai-popup-header {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Header settings gear icon */
+        .header-settings-btn {
+            color: var(--content-secondary);
+            cursor: pointer;
+            transition: color 0.2s;
+            font-size: 1.25rem;
+        }
+        .header-settings-btn:hover {
+            color: var(--accent-primary);
+        }
+        .header-settings-btn i {
+            transition: transform 0.4s;
+        }
+        .header-settings-btn:hover i {
+            transform: rotate(90deg);
+        }
+
+        /* Export dropdown (sidebar version) */
+        .sidebar-export-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 0.25rem;
+            width: 13rem;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border-base);
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            z-index: 50;
+            overflow: hidden;
+        }
+        .sidebar-export-dropdown.show {
+            display: block;
+        }
+
+        /* Main tab (Home/Semantic) */
+        .main-tab {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            color: var(--content-muted);
+        }
+        .main-tab:hover {
+            color: var(--content-secondary);
+        }
+        .main-tab-active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+        }
     </style>
 </head>
 <body class="bg-surface-base text-content-primary h-screen flex overflow-hidden" hx-headers='{"X-Requested-With": "XMLHttpRequest"}'>
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-surface-elevated border-r border-border-base flex flex-col shadow-sm">
+    <!-- ============================================================
+         SIDEBAR (Remodeled: sample.html style)
+         ============================================================ -->
+    <aside class="w-72 bg-surface-elevated border-r border-border-base flex flex-col shadow-sm">
         <!-- Logo -->
-        <div class="h-16 border-b border-border-base flex items-center justify-center px-5 gap-3">
-            <h1 class="text-3xl font-bold bg-gradient-to-r from-accent-primary to-indigo-500 bg-clip-text text-transparent">PaperBot</h1>
+        <div class="p-6 font-bold text-2xl tracking-tight">
+            <span class="bg-gradient-to-r from-accent-primary to-indigo-500 bg-clip-text text-transparent">PaperBot</span>
         </div>
-        
-        <!-- Stats -->
-        <div class="p-4" id="stats-container" hx-get="/stats" hx-trigger="load, statsUpdated from:body" hx-swap="innerHTML">
-            <div class="section-header mb-3">통계</div>
-            <div class="grid grid-cols-2 gap-3">
-                <div class="stat-card-blue">
-                    <div class="text-2xl font-bold text-accent-primary">{{ stats.new }}</div>
-                    <div class="text-xs text-accent-primary font-medium opacity-80">NEW</div>
-                </div>
-                <div class="stat-card-amber">
-                    <div class="text-2xl font-bold text-accent-warning">{{ stats.picked }}</div>
-                    <div class="text-xs text-accent-warning font-medium opacity-80">PICKED</div>
-                </div>
-                <div class="stat-card-muted">
-                    <div class="text-2xl font-bold text-content-secondary">{{ stats.archived }}</div>
-                    <div class="text-xs text-content-muted font-medium">ARCHIVED</div>
-                </div>
-                <div class="stat-card-green">
-                    <div class="text-2xl font-bold text-accent-success">{{ stats.read }}</div>
-                    <div class="text-xs text-accent-success font-medium opacity-80">READ</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Actions -->
-        <div class="p-4 border-t border-border-base">
-            <div class="section-header mb-3">작업</div>
-            
-            <!-- Fetch Button -->
+
+        <!-- Action Buttons (horizontal layout) -->
+        <div class="px-4 flex gap-2 mb-4">
             <button id="fetch-btn"
-                    hx-post="/actions/fetch" 
-                    hx-target="#fetch-toast-slot" 
+                    hx-post="/actions/fetch"
+                    hx-target="#fetch-toast-slot"
                     hx-swap="innerHTML"
-                    class="w-full mb-2 btn-primary">
-                <span>Fetch New Papers</span>
+                    class="flex-1 flex items-center justify-center gap-2 text-xs font-semibold py-2.5 rounded-lg transition-all active:scale-95"
+                    style="background-color: var(--accent-primary); color: var(--content-inverse);">
+                <i class="fa-solid fa-download text-[11px]"></i> Fetch Papers
             </button>
-            
-            <!-- Export Dropdown (sample.html style) -->
-            <div class="export-wrapper relative">
-                <button type="button" id="export-menu-btn" onclick="toggleExportMenu()" class="w-full btn-dark flex items-center justify-center gap-2">
-                    <span>Export Papers</span>
-                    <span id="export-arrow" class="inline-block text-sm opacity-80">▾</span>
+            <div class="relative export-wrapper">
+                <button id="export-menu-btn" onclick="toggleExportMenu()"
+                        class="flex items-center justify-center gap-2 text-xs font-semibold px-4 py-2.5 rounded-lg border transition-all active:scale-95"
+                        style="background-color: var(--surface-overlay); color: var(--content-secondary); border-color: var(--border-base);">
+                    <i class="fa-solid fa-file-export text-[11px]"></i> Export <i id="export-arrow" class="fa-solid fa-chevron-down text-[8px] ml-0.5 opacity-50"></i>
                 </button>
-                <div id="export-dropdown" class="export-dropdown">
-                    <div class="px-3 py-1 text-[11px] text-content-muted uppercase tracking-wide">Export Picked Papers</div>
-                    <div class="export-row flex items-center gap-2 px-3 py-2 hover:bg-surface-overlay hover:text-accent-primary cursor-pointer relative" data-export-type="picked" data-export-count="{{ stats.picked }}" onclick="handleExportRowClick(this, event)">
-                        <span class="w-[7.5em] shrink-0 text-sm">Export Picked</span>
-                        <span id="export-picked-badge" class="text-[11px] bg-accent-primary/10 px-1.5 py-0.5 rounded text-accent-primary">{{ stats.picked }}</span>
-                        <span class="ml-auto text-content-muted">›</span>
-                        <div class="export-submenu hidden absolute left-full top-0 ml-1 w-40 bg-surface-elevated border border-border-base rounded-lg shadow-lg py-1 z-[101] text-content-primary" onclick="event.stopPropagation()">
-                            <button type="button" onclick="doExportPicked('tex'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">BibTeX (.bib)</button>
-                            <button type="button" onclick="doExportPicked('md'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Markdown (.md)</button>
-                            <button type="button" onclick="doExportPicked('csv'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Excel (.csv)</button>
-                        </div>
+                <div id="export-dropdown" class="sidebar-export-dropdown">
+                    <!-- Section: Picked → Read -->
+                    <div class="px-3 pt-2.5 pb-1">
+                        <span class="text-[9px] font-bold uppercase tracking-wider" style="color: var(--content-muted);">Picked → Read</span>
                     </div>
-                    <div class="h-px bg-border-base my-1 mx-2"></div>
-                    <div class="px-3 py-1 text-[11px] text-content-muted uppercase tracking-wide">Export Read Papers</div>
-                    <div class="export-row flex items-center gap-2 px-3 py-2 hover:bg-surface-overlay hover:text-accent-primary cursor-pointer relative" data-export-type="read-all" data-export-count="{{ stats.read }}" onclick="handleExportRowClick(this, event)">
-                        <span class="w-[7.5em] shrink-0 text-sm">Export All Read</span>
-                        <span id="export-read-all-badge" class="text-[11px] bg-accent-primary/10 px-1.5 py-0.5 rounded text-accent-primary">{{ stats.read }}</span>
-                        <span class="ml-auto text-content-muted">›</span>
-                        <div class="export-submenu hidden absolute left-full top-0 ml-1 w-40 bg-surface-elevated border border-border-base rounded-lg shadow-lg py-1 z-[101] text-content-primary" onclick="event.stopPropagation()">
-                            <button type="button" onclick="doExportRead('all', 'tex'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">BibTeX (.bib)</button>
-                            <button type="button" onclick="doExportRead('all', 'md'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Markdown (.md)</button>
-                            <button type="button" onclick="doExportRead('all', 'csv'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Excel (.csv)</button>
-                        </div>
+                    <button class="export-option flex items-center gap-2.5 w-full px-3 py-2 text-xs transition-colors"
+                            style="color: var(--content-secondary);"
+                            onmouseover="this.style.color='var(--accent-primary)'"
+                            onmouseout="this.style.color='var(--content-secondary)'"
+                            onclick="doPromoteToRead(); closeExportMenu();">
+                        <i class="fa-solid fa-arrow-right text-[10px] w-4 text-center" style="color: #8b5cf6;"></i> Mark as Read
+                    </button>
+
+                    <!-- Divider -->
+                    <div class="mx-3 my-1.5" style="border-top: 1px solid var(--border-base);"></div>
+
+                    <!-- Section: Read Library -->
+                    <div class="px-3 pt-1 pb-1">
+                        <span class="text-[9px] font-bold uppercase tracking-wider" style="color: var(--content-muted);">Read Library</span>
                     </div>
-                    <div class="export-row flex items-center gap-2 px-3 py-2 hover:bg-accent-primary-subtle hover:text-accent-primary cursor-pointer font-semibold relative" data-export-type="filtered" data-export-count="0" onclick="handleExportRowClick(this, event)">
-                        <span class="w-[7.5em] shrink-0 text-sm">Export Filtered</span>
-                        <span id="export-filtered-badge" class="text-[11px] bg-accent-primary/10 px-1.5 py-0.5 rounded text-accent-primary">0</span>
-                        <span class="ml-auto text-content-muted">›</span>
-                        <div class="export-submenu hidden absolute left-full top-0 ml-1 w-40 bg-surface-elevated border border-border-base rounded-lg shadow-lg py-1 z-[101] text-content-primary" onclick="event.stopPropagation()">
-                            <button type="button" onclick="doExportRead('filtered', 'tex'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">BibTeX (.bib)</button>
-                            <button type="button" onclick="doExportRead('filtered', 'md'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Markdown (.md)</button>
-                            <button type="button" onclick="doExportRead('filtered', 'csv'); closeExportMenu();" class="export-submenu-item w-full text-left px-3 py-2 text-sm text-content-primary hover:bg-surface-overlay hover:text-accent-primary">Excel (.csv)</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Journal Filter -->
-        <div class="p-4 border-t border-border-base">
-            <div class="section-header mb-3">저널 필터</div>
-            <select id="journal-filter" 
-                    class="input"
-                    onchange="filterByJournal(this.value)">
-                <option value="">전체 저널</option>
-                {% for journal in journals %}
-                <option value="{{ journal }}">{{ journal }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        
-        <!-- Keyword Filter -->
-        <div class="p-4 border-t border-border-base flex flex-col" style="max-height: 320px;">
-            <div class="flex items-center justify-between mb-3">
-                <div class="section-header">키워드 필터</div>
-                <!-- AND/OR Toggle -->
-                <div class="flex items-center gap-1.5">
-                    <span id="keyword-mode-label" class="text-xs text-content-muted">OR</span>
-                    <button id="keyword-mode-toggle" 
-                            onclick="toggleKeywordMode()"
-                            class="relative w-8 h-4 rounded-full bg-surface-overlay border border-border-base transition-colors"
-                            title="OR: 키워드 중 하나라도 포함 / AND: 모든 키워드 포함">
-                        <span id="keyword-mode-knob" class="absolute top-0.5 left-0.5 w-2.5 h-2.5 rounded-full bg-content-muted transition-all"></span>
+                    <button class="export-option flex items-center gap-2.5 w-full px-3 py-2 text-xs transition-colors"
+                            style="color: var(--content-secondary);"
+                            onmouseover="this.style.color='var(--accent-success)'"
+                            onmouseout="this.style.color='var(--content-secondary)'"
+                            onclick="doExportRead('all', 'tex'); closeExportMenu();">
+                        <i class="fa-solid fa-book text-[10px] w-4 text-center" style="color: var(--accent-primary);"></i> BibTeX (.bib)
+                    </button>
+                    <button class="export-option flex items-center gap-2.5 w-full px-3 py-2 text-xs transition-colors"
+                            style="color: var(--content-secondary);"
+                            onmouseover="this.style.color='var(--accent-success)'"
+                            onmouseout="this.style.color='var(--content-secondary)'"
+                            onclick="doExportRead('all', 'md'); closeExportMenu();">
+                        <i class="fa-brands fa-markdown text-[10px] w-4 text-center" style="color: var(--accent-success);"></i> Markdown (.md)
+                    </button>
+                    <button class="export-option flex items-center gap-2.5 w-full px-3 py-2 text-xs transition-colors pb-2.5"
+                            style="color: var(--content-secondary);"
+                            onmouseover="this.style.color='var(--accent-success)'"
+                            onmouseout="this.style.color='var(--content-secondary)'"
+                            onclick="doExportRead('all', 'csv'); closeExportMenu();">
+                        <i class="fa-solid fa-table text-[10px] w-4 text-center" style="color: var(--accent-warning);"></i> CSV (.csv)
                     </button>
                 </div>
             </div>
-            
-            <!-- Keyword Input -->
-            <input type="text" 
-                   id="keyword-input"
-                   placeholder="키워드 입력 후 Enter"
-                   class="keyword-input mb-3"
-                   onkeydown="handleKeywordInput(event)">
-            
-            <!-- Keyword Chips Container -->
-            <div id="keyword-chips" class="keyword-chips-container custom-scroll">
-                <!-- Empty placeholder -->
-                <div id="keyword-placeholder" class="keyword-placeholder">
-                    관심 키워드를 입력하세요
+        </div>
+
+        <!-- Library Nav -->
+        <div class="px-4 mb-4 space-y-0.5">
+            <div class="text-[11px] font-semibold ml-1 mb-2 uppercase" style="color: var(--content-muted);">Library</div>
+            <a href="#" class="lib-nav lib-nav-active" data-lib="new" id="lib-nav-new" onclick="switchTab('new'); event.preventDefault();">
+                <i class="fa-solid fa-bolt text-xs w-4 text-center"></i>
+                <span class="text-sm flex-1">New</span>
+                <span id="lib-badge-new" class="text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[24px] text-center"
+                      style="background-color: color-mix(in srgb, var(--accent-primary) 15%, transparent); color: var(--accent-primary);">{{ stats.new }}</span>
+            </a>
+            <a href="#" class="lib-nav lib-nav-inactive" data-lib="picked" id="lib-nav-picked" onclick="switchTab('picked'); event.preventDefault();">
+                <i class="fa-solid fa-bookmark text-xs w-4 text-center"></i>
+                <span class="text-sm flex-1">Picked</span>
+                <span id="lib-badge-picked" class="text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[24px] text-center"
+                      style="background-color: color-mix(in srgb, var(--accent-warning) 15%, transparent); color: var(--accent-warning);">{{ stats.picked }}</span>
+            </a>
+            <a href="#" class="lib-nav lib-nav-inactive" data-lib="read" id="lib-nav-read" onclick="switchTab('read'); event.preventDefault();">
+                <i class="fa-solid fa-file-lines text-xs w-4 text-center"></i>
+                <span class="text-sm flex-1">Read</span>
+                <span id="lib-badge-read" class="text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[24px] text-center"
+                      style="background-color: color-mix(in srgb, var(--accent-success) 15%, transparent); color: var(--accent-success);">{{ stats.read }}</span>
+            </a>
+            <a href="#" class="lib-nav lib-nav-inactive" data-lib="archive" id="lib-nav-archive" onclick="switchTab('archive'); event.preventDefault();">
+                <i class="fa-solid fa-box-archive text-xs w-4 text-center"></i>
+                <span class="text-sm flex-1">Archived</span>
+                <span id="lib-badge-archived" class="text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[24px] text-center"
+                      style="background-color: var(--accent-muted-subtle); color: var(--content-muted);">{{ stats.archived }}</span>
+            </a>
+            <a href="#" class="lib-nav lib-nav-inactive" data-lib="all" id="lib-nav-all" onclick="switchTab('all'); event.preventDefault();">
+                <i class="fa-solid fa-layer-group text-xs w-4 text-center"></i>
+                <span class="text-sm flex-1">All</span>
+                <span id="lib-badge-all" class="text-[10px] font-bold px-1.5 py-0.5 rounded-md min-w-[24px] text-center"
+                      style="background-color: var(--accent-muted-subtle); color: var(--content-muted);">{{ stats.new + stats.picked + stats.archived + stats.read }}</span>
+            </a>
+        </div>
+
+        <!-- Filters -->
+        <div class="px-4 mb-4 flex-1 overflow-hidden flex flex-col">
+            <div class="flex items-center justify-between ml-1 mr-1 mb-2">
+                <label class="text-[11px] font-semibold uppercase tracking-wide" style="color: var(--content-muted);">Filters</label>
+                <button id="btnClearAll" class="text-[10px] transition-colors hidden" style="color: var(--content-muted);"
+                        onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--content-muted)'"
+                        onclick="clearAllFilters()">
+                    <i class="fa-solid fa-xmark text-[8px] mr-0.5"></i>Clear all
+                </button>
+            </div>
+
+            <!-- Keyword Search Input -->
+            <div class="relative mb-2.5">
+                <i class="fa-solid fa-magnifying-glass text-[10px] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style="color: var(--content-muted);"></i>
+                <input type="text" id="keyword-input" placeholder="Add keyword filter..."
+                    class="w-full rounded-lg py-2 pl-7 pr-3 text-xs outline-none transition-all"
+                    style="background-color: var(--surface-overlay); border: 1px solid var(--border-base); color: var(--content-primary);"
+                    onfocus="this.style.borderColor='var(--accent-primary)'; this.style.boxShadow='0 0 0 3px color-mix(in srgb, var(--accent-primary) 8%, transparent)'"
+                    onblur="this.style.borderColor='var(--border-base)'; this.style.boxShadow='none'"
+                    onkeydown="handleKeywordInput(event)">
+            </div>
+
+            <!-- Journal Select -->
+            <div class="relative mb-3">
+                <i class="fa-solid fa-newspaper text-[10px] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style="color: var(--content-muted);"></i>
+                <select id="journal-filter"
+                        class="w-full rounded-lg py-2 pl-7 pr-3 text-xs outline-none cursor-pointer appearance-none transition-all"
+                        style="background-color: var(--surface-overlay); border: 1px solid var(--border-base); color: var(--content-secondary);"
+                        onfocus="this.style.borderColor='var(--accent-primary)'; this.style.boxShadow='0 0 0 3px color-mix(in srgb, var(--accent-primary) 8%, transparent)'"
+                        onblur="this.style.borderColor='var(--border-base)'; this.style.boxShadow='none'"
+                        onchange="handleJournalChip(this)">
+                    <option value="" disabled selected>Add journal filter...</option>
+                    {% for journal in journals %}
+                    <option value="{{ journal }}">{{ journal }}</option>
+                    {% endfor %}
+                </select>
+                <i class="fa-solid fa-chevron-down text-[8px] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style="color: var(--content-muted);"></i>
+            </div>
+
+            <!-- Active Filter Chips -->
+            <div id="chipSection" class="hidden flex-1 overflow-hidden flex flex-col">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] font-medium" style="color: var(--content-muted);"><span id="chipCount">0</span> active</span>
+                    <!-- AND / OR Toggle -->
+                    <div id="logicToggle" class="flex items-center rounded-md p-0.5" style="background-color: var(--surface-overlay); border: 1px solid var(--border-base);">
+                        <button class="logic-btn text-[9px] font-bold px-2 py-0.5 rounded transition-all" data-mode="or"
+                                style="background-color: color-mix(in srgb, var(--accent-primary) 20%, transparent); color: var(--accent-primary);"
+                                onclick="setFilterMode('or')">OR</button>
+                        <button class="logic-btn text-[9px] font-bold px-2 py-0.5 rounded transition-all" data-mode="and"
+                                style="color: var(--content-muted);"
+                                onclick="setFilterMode('and')">AND</button>
+                    </div>
                 </div>
-                <!-- Chips will be added here -->
+                <div class="relative flex-1 overflow-hidden">
+                    <div id="chipContainer" class="flex flex-wrap gap-1.5 max-h-[88px] overflow-y-auto sidebar-scroll pr-0.5">
+                    </div>
+                    <!-- Scroll fade + hint -->
+                    <div id="chipOverflowHint" class="hidden">
+                        <div class="absolute bottom-0 left-0 right-0 h-6 pointer-events-none rounded-b" style="background: linear-gradient(to top, var(--surface-elevated), transparent);"></div>
+                        <div class="flex items-center justify-center pt-1.5">
+                            <button id="chipScrollBtn" class="text-[9px] transition-colors flex items-center gap-1" style="color: var(--content-muted);"
+                                    onmouseover="this.style.color='var(--accent-primary)'" onmouseout="this.style.color='var(--content-muted)'"
+                                    onclick="document.getElementById('chipContainer').scrollTo({top:9999,behavior:'smooth'})">
+                                <i class="fa-solid fa-chevron-down text-[7px] animate-bounce"></i>
+                                <span id="chipOverflowCount">+0 more</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <!-- Spacer -->
-        <div class="flex-1"></div>
-        
-        <!-- Footer: 구분선 위, Preferences + version 함께 -->
-        <div class="border-t border-border-base p-4 pt-3 flex flex-col gap-2">
-            <div class="nav-item-settings justify-center" onclick="typeof toggleModal === 'function' && toggleModal(true)" role="button" tabindex="0">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                </svg>
-                <span>Preferences</span>
-            </div>
-            <div class="text-[11px] text-content-muted text-center opacity-70">
-                PaperBot v{{ version }}
-            </div>
+
+        <!-- Footer -->
+        <div class="px-5 py-4 text-[10px] text-center" style="border-top: 1px solid var(--border-base); color: var(--content-muted);">
+            PaperBot v{{ version }}
         </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 flex flex-col overflow-hidden">
-        <!-- Header with Tabs and Search -->
-        <header class="bg-surface-elevated border-b border-border-base px-6 shadow-sm">
-            <div class="flex items-center justify-between h-16">
-                <!-- Tabs -->
-                <nav class="flex gap-1">
-                    <button id="tab-new" onclick="switchTab('new')" class="tab-active">
-                        New
-                        <span id="badge-new" class="ml-1 badge-primary">{{ stats.new }}</span>
+    <!-- ============================================================
+         MAIN CONTENT
+         ============================================================ -->
+    <main class="flex-1 flex flex-col overflow-hidden relative" style="background-color: var(--surface-base);">
+        <!-- Header: Home/Semantic tabs + Search + Settings -->
+        <header style="border-bottom: 1px solid var(--border-base); background-color: var(--surface-elevated);">
+            <div class="flex items-center justify-between px-8 h-12">
+                <!-- Main Tabs: Home / Semantic -->
+                <div class="flex items-center gap-1">
+                    <button class="main-tab main-tab-active" data-main-tab="home" onclick="switchMainTab('home')">
+                        <i class="fa-solid fa-house text-[11px] mr-1.5"></i>Home
                     </button>
-                    <button id="tab-picked" onclick="switchTab('picked')" class="tab-inactive">
-                        Picked
-                        <span id="badge-picked" class="ml-1 badge-warning">{{ stats.picked }}</span>
+                    <button class="main-tab" data-main-tab="semantic" onclick="switchMainTab('semantic')">
+                        <i class="fa-solid fa-diagram-project text-[11px] mr-1.5"></i>Semantic
                     </button>
-                    <button id="tab-archive" onclick="switchTab('archive')" class="tab-inactive">
-                        Archive
-                    </button>
-                    <button id="tab-read" onclick="switchTab('read')" class="tab-inactive">
-                        Read
-                    </button>
-                    <button id="tab-all" onclick="switchTab('all')" class="tab-inactive">
-                        All
-                    </button>
-                </nav>
-                
-                <!-- Search -->
-                <div class="flex-1 max-w-md ml-8">
+                </div>
+                <!-- Search + Settings -->
+                <div class="flex items-center gap-4">
                     <div class="relative">
-                        <input type="search" id="search-input" 
-                               placeholder="제목, 저널, 저자 검색..." 
-                               class="input-search"
+                        <i class="fa-solid fa-magnifying-glass text-xs absolute left-3.5 top-1/2 -translate-y-1/2" style="color: var(--content-muted);"></i>
+                        <input type="search" id="search-input"
+                               placeholder="Search papers..."
+                               class="py-2 pl-9 pr-4 text-sm w-80 outline-none rounded-lg transition-all"
+                               style="background-color: var(--surface-overlay); border: 1px solid var(--border-base); color: var(--content-primary);"
+                               onfocus="this.style.borderColor='var(--accent-primary)'; this.style.backgroundColor='var(--surface-elevated)'"
+                               onblur="this.style.borderColor='var(--border-base)'; this.style.backgroundColor='var(--surface-overlay)'"
                                oninput="debouncedSearch()">
-                        <svg class="w-4 h-4 text-content-muted absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                        </svg>
                     </div>
+                    <button class="header-settings-btn" onclick="typeof toggleModal === 'function' && toggleModal(true)" title="Preferences">
+                        <i class="fa-solid fa-gear"></i>
+                    </button>
                 </div>
             </div>
         </header>
 
-        <!-- Content Area -->
-        <div class="flex-1 flex overflow-hidden">
+        <!-- Semantic Placeholder (hidden by default) -->
+        <div id="semantic-content" class="hidden flex-1 flex items-center justify-center" style="color: var(--content-muted);">
+            <div class="text-center">
+                <i class="fa-solid fa-diagram-project text-4xl mb-4 opacity-30"></i>
+                <p class="text-lg font-medium mb-1" style="color: var(--content-secondary);">Semantic View</p>
+                <p class="text-sm">추후 구현 예정입니다.</p>
+            </div>
+        </div>
+
+        <!-- Home Content Area (paper list + detail) -->
+        <div id="home-content" class="flex-1 flex overflow-hidden">
             <!-- Paper List -->
             <div class="w-2/5 border-r border-border-base bg-surface-elevated flex flex-col">
                 <!-- Filter Bar: 2-row layout -->
@@ -1477,6 +1718,52 @@
                     <p class="text-sm">왼쪽 목록에서 논문을 선택하면<br>메타데이터와 초록을 확인할 수 있습니다.</p>
                 </div>
             </article>
+        </div>
+
+        <!-- AI Chatbot FAB (bottom-right) -->
+        <button id="aiFab" class="ai-fab" onclick="toggleAI()" aria-label="Open AI assistant">
+            <i class="fa-solid fa-robot text-xl fab-icon fab-icon-robot"></i>
+            <i class="fa-solid fa-xmark text-lg fab-icon fab-icon-close"></i>
+        </button>
+
+        <!-- AI Chatbot Popup -->
+        <div id="aiPopup" class="ai-popup">
+            <div class="ai-popup-header p-4 flex justify-between items-center rounded-t-[20px]"
+                 style="border-bottom: 1px solid var(--border-base); background-color: color-mix(in srgb, var(--surface-overlay) 85%, transparent);">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-2 h-2 rounded-full animate-pulse" style="background-color: var(--accent-success);"></div>
+                    <span class="font-bold text-sm" style="color: var(--accent-primary);">PaperBot AI</span>
+                    <span class="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                          style="background-color: color-mix(in srgb, var(--accent-success) 15%, transparent); color: var(--accent-success);">Online</span>
+                </div>
+                <button onclick="toggleAI()" class="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+                        style="color: var(--content-muted);"
+                        onmouseover="this.style.backgroundColor='var(--surface-overlay)'; this.style.color='var(--content-primary)'"
+                        onmouseout="this.style.backgroundColor=''; this.style.color='var(--content-muted)'">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            </div>
+            <div class="flex-1 p-4 overflow-y-auto text-sm space-y-4 sidebar-scroll" style="color: var(--content-secondary);">
+                <div class="p-3 rounded-xl self-start max-w-[85%]"
+                     style="background-color: var(--surface-overlay); border: 1px solid var(--border-base);">
+                    안녕하세요! 읽고 계신 논문에 대해 궁금한 점이 있으신가요?
+                </div>
+            </div>
+            <div class="p-4" style="border-top: 1px solid var(--border-base);">
+                <div class="relative">
+                    <input type="text" placeholder="질문을 입력하세요..."
+                           class="w-full rounded-xl py-2.5 px-4 pr-10 text-sm outline-none transition-all"
+                           style="background-color: var(--surface-overlay); border: 1px solid var(--border-base); color: var(--content-primary);"
+                           onfocus="this.style.borderColor='var(--accent-primary)'; this.style.boxShadow='0 0 0 3px color-mix(in srgb, var(--accent-primary) 10%, transparent)'"
+                           onblur="this.style.borderColor='var(--border-base)'; this.style.boxShadow='none'">
+                    <button class="absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+                            style="color: var(--accent-primary);"
+                            onmouseover="this.style.backgroundColor='color-mix(in srgb, var(--accent-primary) 10%, transparent)'"
+                            onmouseout="this.style.backgroundColor=''">
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -1604,15 +1891,17 @@
         function switchTab(tab) {
             currentTab = tab;
             
-            // Update tab styles
+            // Update library nav styles
             ['new', 'picked', 'archive', 'read', 'all'].forEach(t => {
-                const btn = document.getElementById('tab-' + t);
-                if (t === tab) {
-                    btn.classList.remove('tab-inactive');
-                    btn.classList.add('tab-active');
-                } else {
-                    btn.classList.remove('tab-active');
-                    btn.classList.add('tab-inactive');
+                const nav = document.getElementById('lib-nav-' + t);
+                if (nav) {
+                    if (t === tab) {
+                        nav.classList.remove('lib-nav-inactive');
+                        nav.classList.add('lib-nav-active');
+                    } else {
+                        nav.classList.remove('lib-nav-active');
+                        nav.classList.add('lib-nav-inactive');
+                    }
                 }
             });
             
@@ -1651,7 +1940,8 @@
         
         function loadPapers() {
             const query = document.getElementById('search-input').value;
-            const journal = document.getElementById('journal-filter').value;
+            // Journal filter: get from active journal chips
+            const journal = journalFilters.length > 0 ? journalFilters[0] : '';
             const params = new URLSearchParams();
             if (query) params.set('q', query);
             if (journal) params.set('journal', journal);
@@ -1672,49 +1962,18 @@
             htmx.ajax('GET', url, '#paper-list');
         }
         
+        // Journal filter state (chip-based)
+        let journalFilters = [];
+        
         // Export dropdown
         function toggleExportMenu() {
             const menu = document.getElementById('export-dropdown');
-            const arrow = document.getElementById('export-arrow');
             if (!menu) return;
             menu.classList.toggle('show');
-            if (arrow) arrow.classList.toggle('rotate-180', menu.classList.contains('show'));
-            if (menu.classList.contains('show')) {
-                document.querySelectorAll('.export-submenu').forEach(s => s.classList.add('hidden'));
-            }
         }
         function closeExportMenu() {
             const menu = document.getElementById('export-dropdown');
-            const arrow = document.getElementById('export-arrow');
             if (menu) menu.classList.remove('show');
-            if (arrow) arrow.classList.remove('rotate-180');
-        }
-        const EXPORT_DISABLED_MESSAGES = {
-            'picked': '선택된 논문이 없습니다.',
-            'read-all': '읽은 논문이 없습니다.',
-            'filtered': '필터된 읽은 논문이 없습니다.'
-        };
-        function handleExportRowClick(rowEl, evt) {
-            const count = parseInt(rowEl.dataset.exportCount || '0', 10);
-            if (count === 0) {
-                const type = rowEl.dataset.exportType || 'picked';
-                showToast('warning', EXPORT_DISABLED_MESSAGES[type] || '내보낼 논문이 없습니다.');
-                return;
-            }
-            const sub = rowEl.querySelector('.export-submenu');
-            if (!sub) return;
-            const isOpen = !sub.classList.contains('hidden');
-            document.querySelectorAll('.export-row').forEach(r => {
-                const s = r.querySelector('.export-submenu');
-                if (s) s.classList.add('hidden');
-            });
-            if (!isOpen) sub.classList.remove('hidden');
-        }
-        function updateExportRowState(rowSelector, count) {
-            const row = document.querySelector(rowSelector);
-            if (!row) return;
-            const n = parseInt(count, 10) || 0;
-            row.dataset.exportCount = String(n);
         }
         function doExportPicked(format) {
             htmx.ajax('POST', '/actions/export', {
@@ -1727,7 +1986,7 @@
             const values = { scope: scope, format: format };
             if (scope === 'filtered') {
                 values.q = document.getElementById('search-input').value || '';
-                values.journal = document.getElementById('journal-filter').value || '';
+                values.journal = journalFilters.length > 0 ? journalFilters[0] : '';
                 values.keywords = keywords.join(',');
                 values.keyword_mode = keywordMode;
                 values.date_from = dateFrom || '';
@@ -1739,9 +1998,209 @@
                 values: values
             });
         }
+        function doPromoteToRead() {
+            htmx.ajax('POST', '/actions/promote-to-read', {
+                target: '#toast-container',
+                swap: 'beforeend'
+            }).then(() => {
+                loadPapers();
+                htmx.trigger(document.body, 'statsUpdated');
+            });
+        }
         document.addEventListener('click', function(evt) {
             if (!evt.target.closest('.export-wrapper')) closeExportMenu();
         });
+        
+        // ============================================
+        // Main Tab Switching (Home / Semantic)
+        // ============================================
+        function switchMainTab(tab) {
+            const mainTabs = document.querySelectorAll('.main-tab');
+            mainTabs.forEach(t => {
+                t.classList.remove('main-tab-active');
+            });
+            const activeBtn = document.querySelector(`.main-tab[data-main-tab="${tab}"]`);
+            if (activeBtn) activeBtn.classList.add('main-tab-active');
+            
+            const homeContent = document.getElementById('home-content');
+            const semanticContent = document.getElementById('semantic-content');
+            if (tab === 'home') {
+                homeContent.classList.remove('hidden');
+                semanticContent.classList.add('hidden');
+            } else {
+                homeContent.classList.add('hidden');
+                semanticContent.classList.remove('hidden');
+            }
+        }
+        
+        // ============================================
+        // AI Chatbot Toggle (with animations)
+        // ============================================
+        let aiOpen = false;
+        function toggleAI() {
+            aiOpen = !aiOpen;
+            const fab = document.getElementById('aiFab');
+            const popup = document.getElementById('aiPopup');
+            
+            if (aiOpen) {
+                fab.classList.add('is-open');
+                popup.classList.add('is-open');
+            } else {
+                fab.classList.remove('is-open');
+                popup.classList.remove('is-open');
+            }
+        }
+        
+        // ============================================
+        // Chip-based Filter System (sample.html port)
+        // ============================================
+        const chipStyles = {
+            journal: {
+                bg: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+                border: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)',
+                text: 'var(--accent-primary)',
+                icon: 'fa-newspaper',
+            },
+            keyword: {
+                bg: 'var(--surface-overlay)',
+                border: 'var(--border-base)',
+                text: 'var(--content-secondary)',
+                icon: 'fa-tag',
+            },
+        };
+        
+        function createChip(label, type) {
+            const s = chipStyles[type];
+            const chip = document.createElement('div');
+            chip.className = 'group flex items-center gap-1.5 pl-2 pr-1 py-1 rounded-md text-[10px] font-semibold transition-all';
+            chip.style.cssText = `background:${s.bg}; border:1px solid ${s.border}; color:${s.text};`;
+            chip.dataset.chipType = type;
+            chip.dataset.chipLabel = label;
+            chip.innerHTML = `
+                <i class="fa-solid ${s.icon} text-[8px] opacity-50"></i>
+                <span>${escapeHtml(label)}</span>
+                <button class="ml-0.5 w-3.5 h-3.5 rounded flex items-center justify-center text-[8px] opacity-40 hover:opacity-100 transition-all"
+                        onmouseover="this.style.backgroundColor='#ef4444'; this.style.color='white'"
+                        onmouseout="this.style.backgroundColor=''; this.style.color=''">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>`;
+            
+            chip.querySelector('button').onclick = () => removeChip(chip, label, type);
+            chip.style.animation = 'chipIn 0.2s ease-out';
+            
+            const container = document.getElementById('chipContainer');
+            container.appendChild(chip);
+            requestAnimationFrame(() => container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' }));
+            updateChipUI();
+        }
+        
+        function removeChip(chip, label, type) {
+            chip.style.transform = 'scale(0.8)';
+            chip.style.opacity = '0';
+            setTimeout(() => {
+                chip.remove();
+                if (type === 'keyword') {
+                    keywords = keywords.filter(k => k !== label);
+                } else if (type === 'journal') {
+                    journalFilters = journalFilters.filter(j => j !== label);
+                }
+                updateChipUI();
+                loadPapers();
+            }, 150);
+        }
+        
+        function handleJournalChip(selectEl) {
+            const val = selectEl.value;
+            if (!val) return;
+            
+            // Check duplicate
+            if (journalFilters.includes(val)) {
+                selectEl.selectedIndex = 0;
+                return;
+            }
+            
+            journalFilters.push(val);
+            createChip(val, 'journal');
+            selectEl.selectedIndex = 0;
+            loadPapers();
+        }
+        
+        function clearAllFilters() {
+            const container = document.getElementById('chipContainer');
+            const chips = [...container.children];
+            chips.forEach((chip, i) => {
+                setTimeout(() => {
+                    chip.style.transform = 'scale(0.8)';
+                    chip.style.opacity = '0';
+                }, i * 40);
+            });
+            setTimeout(() => {
+                container.innerHTML = '';
+                keywords = [];
+                journalFilters = [];
+                updateChipUI();
+                loadPapers();
+            }, chips.length * 40 + 150);
+        }
+        
+        function setFilterMode(mode) {
+            keywordMode = mode;
+            const btns = document.querySelectorAll('.logic-btn');
+            btns.forEach(btn => {
+                if (btn.dataset.mode === mode) {
+                    btn.style.backgroundColor = 'color-mix(in srgb, var(--accent-primary) 20%, transparent)';
+                    btn.style.color = 'var(--accent-primary)';
+                } else {
+                    btn.style.backgroundColor = '';
+                    btn.style.color = 'var(--content-muted)';
+                }
+            });
+            if (keywords.length > 1) loadPapers();
+        }
+        
+        // Chip section visibility + count + overflow hint
+        function updateChipUI() {
+            const container = document.getElementById('chipContainer');
+            const chipSection = document.getElementById('chipSection');
+            const btnClearAll = document.getElementById('btnClearAll');
+            const chipCount = document.getElementById('chipCount');
+            const chipOverflowHint = document.getElementById('chipOverflowHint');
+            const chipOverflowCount = document.getElementById('chipOverflowCount');
+            
+            const count = container.children.length;
+            chipSection.classList.toggle('hidden', count === 0);
+            btnClearAll.classList.toggle('hidden', count === 0);
+            chipCount.textContent = count;
+            requestAnimationFrame(updateOverflowHint);
+        }
+        
+        function countHiddenChips() {
+            const container = document.getElementById('chipContainer');
+            let hidden = 0;
+            [...container.children].forEach(chip => {
+                if (chip.offsetTop + chip.offsetHeight > container.scrollTop + container.clientHeight) hidden++;
+            });
+            return hidden;
+        }
+        
+        function updateOverflowHint() {
+            const container = document.getElementById('chipContainer');
+            const chipOverflowHint = document.getElementById('chipOverflowHint');
+            const chipOverflowCount = document.getElementById('chipOverflowCount');
+            
+            const isOverflowing = container.scrollHeight > container.clientHeight;
+            const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 2;
+            
+            if (isOverflowing && !atBottom) {
+                chipOverflowHint.classList.remove('hidden');
+                const hidden = countHiddenChips();
+                chipOverflowCount.textContent = `+${hidden} more`;
+            } else {
+                chipOverflowHint.classList.add('hidden');
+            }
+        }
+        
+        document.getElementById('chipContainer').addEventListener('scroll', updateOverflowHint);
         
         function debouncedSearch() {
             clearTimeout(searchTimeout);
@@ -1749,11 +2208,12 @@
         }
         
         function filterByJournal(journal) {
+            // Legacy compatibility - now handled by chip system
             loadPapers();
         }
         
         // ============================================
-        // Keyword Filter Functions
+        // Keyword Filter Functions (chip-based)
         // ============================================
         
         function handleKeywordInput(event) {
@@ -1766,12 +2226,19 @@
             
             // Check for duplicate
             if (keywords.includes(text)) {
-                // Shake the existing chip
-                const chips = document.querySelectorAll('.keyword-chip');
-                chips.forEach(chip => {
-                    if (chip.dataset.keyword.toLowerCase() === text) {
-                        chip.classList.add('shake');
-                        setTimeout(() => chip.classList.remove('shake'), 400);
+                // Shake existing chip
+                const container = document.getElementById('chipContainer');
+                [...container.children].forEach(chip => {
+                    if (chip.dataset.chipType === 'keyword' && chip.dataset.chipLabel === text) {
+                        chip.style.animation = '';
+                        requestAnimationFrame(() => {
+                            chip.style.animation = 'shake 0.4s ease-in-out';
+                            chip.style.borderColor = 'var(--accent-warning)';
+                            setTimeout(() => {
+                                chip.style.animation = '';
+                                chip.style.borderColor = chipStyles.keyword.border;
+                            }, 400);
+                        });
                     }
                 });
                 input.value = '';
@@ -1782,75 +2249,8 @@
             keywords.push(text);
             input.value = '';
             
-            renderKeywordChips();
+            createChip(text, 'keyword');
             loadPapers();
-        }
-        
-        function deleteKeyword(text) {
-            keywords = keywords.filter(k => k !== text);
-            renderKeywordChips();
-            loadPapers();
-        }
-        
-        function toggleKeywordMode() {
-            keywordMode = keywordMode === 'or' ? 'and' : 'or';
-            
-            const label = document.getElementById('keyword-mode-label');
-            const toggle = document.getElementById('keyword-mode-toggle');
-            const knob = document.getElementById('keyword-mode-knob');
-            
-            if (keywordMode === 'and') {
-                label.textContent = 'AND';
-                toggle.classList.add('bg-accent-primary-subtle');
-                toggle.classList.remove('bg-surface-overlay');
-                knob.classList.add('bg-accent-primary');
-                knob.classList.remove('bg-content-muted');
-                knob.style.left = 'calc(100% - 14px)';
-            } else {
-                label.textContent = 'OR';
-                toggle.classList.remove('bg-accent-primary-subtle');
-                toggle.classList.add('bg-surface-overlay');
-                knob.classList.remove('bg-accent-primary');
-                knob.classList.add('bg-content-muted');
-                knob.style.left = '2px';
-            }
-            
-            // Reload if there are keywords
-            if (keywords.length > 1) {
-                loadPapers();
-            }
-        }
-        
-        function renderKeywordChips() {
-            const container = document.getElementById('keyword-chips');
-            const placeholder = document.getElementById('keyword-placeholder');
-            
-            // Clear existing chips (except placeholder)
-            container.querySelectorAll('.keyword-chip').forEach(chip => chip.remove());
-            
-            if (keywords.length === 0) {
-                placeholder.style.display = 'block';
-                return;
-            }
-            
-            placeholder.style.display = 'none';
-            
-            keywords.forEach(keyword => {
-                const chip = document.createElement('div');
-                chip.className = 'keyword-chip active';
-                chip.dataset.keyword = keyword;
-                
-                chip.innerHTML = `
-                    <span>${escapeHtml(keyword)}</span>
-                    <span class="keyword-chip-delete" onclick="deleteKeyword('${escapeHtml(keyword)}')">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </span>
-                `;
-                
-                container.appendChild(chip);
-            });
         }
         
         function escapeHtml(text) {
@@ -2181,39 +2581,31 @@
             updateSortOrderIcon();
         });
         
-        // Update tab badges and export dropdown badges with fresh counts
+        // Update library nav badges with fresh counts
         function updateBadges() {
             fetch('/stats/badges')
                 .then(res => res.json())
                 .then(data => {
-                    const badgeNew = document.getElementById('badge-new');
-                    const badgePicked = document.getElementById('badge-picked');
-                    if (badgeNew) badgeNew.textContent = data.new;
-                    if (badgePicked) badgePicked.textContent = data.picked;
-                    const exportPickedBadge = document.getElementById('export-picked-badge');
-                    const exportReadAllBadge = document.getElementById('export-read-all-badge');
-                    const pickedCount = String(data.picked ?? 0);
-                    const readCount = String(data.read ?? 0);
-                    if (exportPickedBadge) exportPickedBadge.textContent = pickedCount;
-                    if (exportReadAllBadge) exportReadAllBadge.textContent = readCount;
-                    updateExportRowState('.export-wrapper .export-row[data-export-type="picked"]', pickedCount);
-                    updateExportRowState('.export-wrapper .export-row[data-export-type="read-all"]', readCount);
+                    const libBadgeNew = document.getElementById('lib-badge-new');
+                    const libBadgePicked = document.getElementById('lib-badge-picked');
+                    const libBadgeRead = document.getElementById('lib-badge-read');
+                    const libBadgeArchived = document.getElementById('lib-badge-archived');
+                    const libBadgeAll = document.getElementById('lib-badge-all');
+                    if (libBadgeNew) libBadgeNew.textContent = data.new;
+                    if (libBadgePicked) libBadgePicked.textContent = data.picked;
+                    if (libBadgeRead) libBadgeRead.textContent = data.read;
+                    if (libBadgeArchived) libBadgeArchived.textContent = data.archived;
+                    if (libBadgeAll) libBadgeAll.textContent = (data.new || 0) + (data.picked || 0) + (data.read || 0) + (data.archived || 0);
                 });
         }
         
-        // After paper list load: update list title and export filtered badge from X-Paper-Count header
+        // After paper list load: update list title from X-Paper-Count header
         document.body.addEventListener('htmx:afterOnLoad', function(evt) {
             const path = (evt.detail.pathInfo && evt.detail.pathInfo.requestPath) || '';
             if (path.startsWith('/papers/') && evt.detail.xhr) {
                 const count = evt.detail.xhr.getResponseHeader('X-Paper-Count');
                 if (count !== null) {
                     document.getElementById('list-title').textContent = titles[currentTab] + ' (' + count + ')';
-                    const filteredBadge = document.getElementById('export-filtered-badge');
-                    if (filteredBadge) {
-                        const filteredCount = currentTab === 'read' ? count : '0';
-                        filteredBadge.textContent = filteredCount;
-                        updateExportRowState('.export-wrapper .export-row[data-export-type="filtered"]', filteredCount);
-                    }
                 }
             }
             // Detail view loaded: mark the corresponding paper card as selected (path like /papers/42)

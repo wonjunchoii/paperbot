@@ -25,21 +25,23 @@ uv run paperbot
 
 ## 초기 설정
 
-첫 실행 후 **좌측 하단 Preferences**에서 아래 항목을 설정한다.
+첫 실행 후 **우측 상단 Preferences**에서 아래 항목을 설정한다.
 
-| 설정 | 용도 |
-|------|------|
-| **Journal List** | 논문을 수집할 저널 RSS 피드 등록. 최소 1개 이상 추가해야 Fetch 가능 |
-| **Email** | 설정하면 Crossref API 응답 속도가 빨라짐 (선택) |
-| **LLM Profiles** | 챗봇 기능을 사용하려면 LLM API 키 등록 (선택) |
+| 설정 | 용도 | 필수 |
+|:-----|:-----|:----:|
+| **Journal List** | 논문을 수집할 저널 RSS 피드 등록. 최소 1개 이상 추가해야 Fetch 가능 | `필수` |
+| **Email** | Crossref API 응답 속도 향상 (polite pool 적용) | `선택` |
+| **LLM Profiles** | AI 챗봇 및 논문 추천 기능에 사용할 LLM API 키 등록 | `선택` |
 
 ## 워크플로우
 
-1. **Fetch** — 사이드바 "Fetch New Papers"로 RSS 피드에서 논문 수집
+1. **Fetch** — 사이드바 "Fetch Papers"로 RSS 피드에서 논문 수집
 2. **Browse** — New 탭에서 논문 확인. AI 매칭 점수 badge로 관심도 파악
-3. **Pick** — 관심 논문 체크 후 "Apply Selection"
-4. **Export Picked** — 선택된 논문을 Read 서재로 이동 (AI 추천의 기반이 됨)
-5. **Export Papers** — 사이드바에서 Markdown / BibTeX / CSV 형태로 파일 내보내기
+3. **Pick** — 관심 논문 체크박스 선택
+4. **Mark as Read** — Export 드롭다운에서 "Mark as Read"로 선택된 논문을 Read 서재로 이동 (AI 추천의 기반이 됨)
+5. **Export** — Export 드롭다운의 Read Library 섹션에서 Read 논문을 BibTeX / Markdown / CSV로 내보내기
+6. **AI Chat** — 우측 하단 챗봇 아이콘으로 서재 논문에 대해 질문 (Preferences에서 LLM API 키 설정 필요)
+7. **Semantic** — 상단 Semantic 탭에서 논문 간 의미적 관련도를 시각적으로 탐색
 
 ## 탭 구성
 
