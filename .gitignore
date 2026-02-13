@@ -38,6 +38,7 @@ uv.lock
 
 # User metadata (API keys, email, feeds)
 .metadata/
+.sample/
 
 # Database
 *.db
